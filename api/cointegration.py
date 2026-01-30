@@ -76,7 +76,7 @@ def adf_test_simple(series, max_lags=None):
     else:
         pvalue = 0.5
 
-    return float(t_stat), pvalue, is_stationary
+    return float(t_stat), pvalue, bool(is_stationary)
 
 
 def test_cointegration(prices1, prices2):
@@ -240,11 +240,11 @@ class handler(BaseHTTPRequestHandler):
                 },
                 "time_series": {
                     "dates": dates[-100:],
-                    "prices1": [round(p, 2) for p in prices1[-100:].tolist()],
-                    "prices2": [round(p, 2) for p in prices2[-100:].tolist()],
-                    "spread": [round(s, 2) for s in spread[-100:].tolist()],
-                    "zscore": [round(z, 4) if not np.isnan(z) else None for z in zscore[-100:].tolist()],
-                    "signals": signals[-100:].tolist(),
+                    "prices1": [round(float(p), 2) for p in prices1[-100:]],
+                    "prices2": [round(float(p), 2) for p in prices2[-100:]],
+                    "spread": [round(float(s), 2) for s in spread[-100:]],
+                    "zscore": [round(float(z), 4) if not np.isnan(z) else None for z in zscore[-100:]],
+                    "signals": [int(s) for s in signals[-100:]],
                 },
             }
 
