@@ -5,7 +5,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TutorialCard } from "@/components/ui/tooltip";
 import { PlotlyChart, chartColors } from "@/components/charts";
+import { mlPredictionTooltips } from "@/lib/tooltips";
 import { formatNumber, formatPercent } from "@/lib/utils/formatters";
 import { Brain, RefreshCw, Play, Loader2 } from "lucide-react";
 
@@ -118,11 +120,20 @@ export default function MLPredictionPage() {
             Predict stock returns using machine learning models
           </p>
         </div>
-        <Button variant="outline" onClick={resetToDefaults}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Reset
-        </Button>
+        <Tooltip content="Clear all inputs and return to default values">
+          <Button variant="outline" onClick={resetToDefaults}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        </Tooltip>
       </div>
+
+      {/* Tutorial Card */}
+      <TutorialCard
+        title={mlPredictionTooltips.tutorial.title}
+        description={mlPredictionTooltips.tutorial.description}
+        steps={mlPredictionTooltips.tutorial.steps}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Input Parameters */}
@@ -135,12 +146,17 @@ export default function MLPredictionPage() {
             <CardDescription>Train ML model on-demand</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <Input
-              label="Stock Ticker"
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value.toUpperCase())}
-              placeholder="AAPL"
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Stock Ticker</label>
+                <Tooltip content={mlPredictionTooltips.ticker} side="right" />
+              </div>
+              <Input
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                placeholder="AAPL"
+              />
+            </div>
 
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Training Period</label>

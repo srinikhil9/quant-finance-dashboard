@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TutorialCard } from "@/components/ui/tooltip";
 import { PlotlyChart, chartColors } from "@/components/charts";
+import { fixedIncomeTooltips } from "@/lib/tooltips";
 import {
   calculateBondSummary,
   calculateYTM,
@@ -179,11 +181,20 @@ export default function FixedIncomePage() {
             Price bonds and analyze duration, convexity, and yield curves
           </p>
         </div>
-        <Button variant="outline" onClick={resetToDefaults}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Reset
-        </Button>
+        <Tooltip content="Clear all inputs and return to default values">
+          <Button variant="outline" onClick={resetToDefaults}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        </Tooltip>
       </div>
+
+      {/* Tutorial Card */}
+      <TutorialCard
+        title={fixedIncomeTooltips.tutorial.title}
+        description={fixedIncomeTooltips.tutorial.description}
+        steps={fixedIncomeTooltips.tutorial.steps}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Input Parameters */}
@@ -196,14 +207,19 @@ export default function FixedIncomePage() {
             <CardDescription>Configure bond characteristics</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <Input
-              label="Face Value ($)"
-              type="number"
-              value={faceValue}
-              onChange={(e) => setFaceValue(parseFloat(e.target.value) || 0)}
-              min={0}
-              step={100}
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Face Value ($)</label>
+                <Tooltip content={fixedIncomeTooltips.faceValue} side="right" />
+              </div>
+              <Input
+                type="number"
+                value={faceValue}
+                onChange={(e) => setFaceValue(parseFloat(e.target.value) || 0)}
+                min={0}
+                step={100}
+              />
+            </div>
 
             <Slider
               label="Coupon Rate"

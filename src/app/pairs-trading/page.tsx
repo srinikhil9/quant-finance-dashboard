@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TutorialCard } from "@/components/ui/tooltip";
 import { PlotlyChart, chartColors } from "@/components/charts";
+import { pairsTradingTooltips } from "@/lib/tooltips";
 import { formatNumber, formatPercent } from "@/lib/utils/formatters";
 import { GitCompare, RefreshCw, Play, Loader2, CheckCircle, XCircle } from "lucide-react";
 
@@ -156,11 +158,20 @@ export default function PairsTradingPage() {
             Statistical arbitrage with cointegration analysis
           </p>
         </div>
-        <Button variant="outline" onClick={resetToDefaults}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Reset
-        </Button>
+        <Tooltip content="Clear all inputs and return to default values">
+          <Button variant="outline" onClick={resetToDefaults}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        </Tooltip>
       </div>
+
+      {/* Tutorial Card */}
+      <TutorialCard
+        title={pairsTradingTooltips.tutorial.title}
+        description={pairsTradingTooltips.tutorial.description}
+        steps={pairsTradingTooltips.tutorial.steps}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Input Parameters */}
@@ -173,19 +184,29 @@ export default function PairsTradingPage() {
             <CardDescription>Select and configure trading pair</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <Input
-              label="Stock 1"
-              value={ticker1}
-              onChange={(e) => setTicker1(e.target.value.toUpperCase())}
-              placeholder="AAPL"
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Stock 1</label>
+                <Tooltip content={pairsTradingTooltips.ticker1} side="right" />
+              </div>
+              <Input
+                value={ticker1}
+                onChange={(e) => setTicker1(e.target.value.toUpperCase())}
+                placeholder="AAPL"
+              />
+            </div>
 
-            <Input
-              label="Stock 2"
-              value={ticker2}
-              onChange={(e) => setTicker2(e.target.value.toUpperCase())}
-              placeholder="MSFT"
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Stock 2</label>
+                <Tooltip content={pairsTradingTooltips.ticker2} side="right" />
+              </div>
+              <Input
+                value={ticker2}
+                onChange={(e) => setTicker2(e.target.value.toUpperCase())}
+                placeholder="MSFT"
+              />
+            </div>
 
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Historical Period</label>

@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TutorialCard } from "@/components/ui/tooltip";
 import { PlotlyChart, chartColors } from "@/components/charts";
+import { varTooltips } from "@/lib/tooltips";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/formatters";
 import { LineChart, RefreshCw, Play, Loader2, AlertTriangle } from "lucide-react";
 
@@ -115,11 +117,20 @@ export default function VaRPage() {
             Estimate portfolio risk using multiple VaR methodologies
           </p>
         </div>
-        <Button variant="outline" onClick={resetToDefaults}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Reset
-        </Button>
+        <Tooltip content="Clear all inputs and return to default values">
+          <Button variant="outline" onClick={resetToDefaults}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        </Tooltip>
       </div>
+
+      {/* Tutorial Card */}
+      <TutorialCard
+        title={varTooltips.tutorial.title}
+        description={varTooltips.tutorial.description}
+        steps={varTooltips.tutorial.steps}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Input Parameters */}
@@ -132,34 +143,53 @@ export default function VaRPage() {
             <CardDescription>Configure VaR calculation</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <Input
-              label="Stock Ticker"
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value.toUpperCase())}
-              placeholder="AAPL"
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Stock Ticker</label>
+                <Tooltip content={varTooltips.ticker} side="right" />
+              </div>
+              <Input
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                placeholder="AAPL"
+              />
+            </div>
 
-            <Input
-              label="Portfolio Value ($)"
-              type="number"
-              value={portfolioValue}
-              onChange={(e) => setPortfolioValue(parseFloat(e.target.value) || 0)}
-              min={0}
-              step={100000}
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Portfolio Value ($)</label>
+                <Tooltip content={varTooltips.portfolioValue} side="right" />
+              </div>
+              <Input
+                type="number"
+                value={portfolioValue}
+                onChange={(e) => setPortfolioValue(parseFloat(e.target.value) || 0)}
+                min={0}
+                step={100000}
+              />
+            </div>
 
-            <Slider
-              label="Confidence Level"
-              value={[confidenceLevel]}
-              onValueChange={([v]) => setConfidenceLevel(v)}
-              min={0.90}
-              max={0.99}
-              step={0.01}
-              formatValue={(v) => `${(v * 100).toFixed(0)}%`}
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Confidence Level</label>
+                <Tooltip content={varTooltips.confidenceLevel} side="right" />
+              </div>
+              <Slider
+                value={[confidenceLevel]}
+                onValueChange={([v]) => setConfidenceLevel(v)}
+                min={0.90}
+                max={0.99}
+                step={0.01}
+                formatValue={(v) => `${(v * 100).toFixed(0)}%`}
+                showValue
+              />
+            </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Historical Period</label>
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Historical Period</label>
+                <Tooltip content={varTooltips.period} side="right" />
+              </div>
               <Select value={period} onValueChange={setPeriod}>
                 <SelectTrigger>
                   <SelectValue />
@@ -211,7 +241,10 @@ export default function VaRPage() {
                 {/* VaR Values */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="p-4 rounded-lg bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/20">
-                    <div className="text-xs text-muted-foreground uppercase">Historical VaR</div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase">
+                      <span>Historical VaR</span>
+                      <Tooltip content={varTooltips.historicalVaR} side="top" />
+                    </div>
                     <div className="text-xl font-bold font-mono-numbers text-green-500">
                       {formatCurrency(result.var_dollar.historical)}
                     </div>
@@ -221,7 +254,10 @@ export default function VaRPage() {
                   </div>
 
                   <div className="p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20">
-                    <div className="text-xs text-muted-foreground uppercase">Parametric VaR</div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase">
+                      <span>Parametric VaR</span>
+                      <Tooltip content={varTooltips.parametricVaR} side="top" />
+                    </div>
                     <div className="text-xl font-bold font-mono-numbers text-blue-500">
                       {formatCurrency(result.var_dollar.parametric)}
                     </div>
@@ -231,7 +267,10 @@ export default function VaRPage() {
                   </div>
 
                   <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/20">
-                    <div className="text-xs text-muted-foreground uppercase">Monte Carlo VaR</div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase">
+                      <span>Monte Carlo VaR</span>
+                      <Tooltip content={varTooltips.monteCarloVaR} side="top" />
+                    </div>
                     <div className="text-xl font-bold font-mono-numbers text-purple-500">
                       {formatCurrency(result.var_dollar.monte_carlo)}
                     </div>
@@ -241,9 +280,10 @@ export default function VaRPage() {
                   </div>
 
                   <div className="p-4 rounded-lg bg-gradient-to-br from-red-500/10 to-transparent border border-red-500/20">
-                    <div className="text-xs text-muted-foreground uppercase flex items-center gap-1">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase">
                       <AlertTriangle className="h-3 w-3" />
-                      CVaR (ES)
+                      <span>CVaR (ES)</span>
+                      <Tooltip content={varTooltips.cvar} side="top" />
                     </div>
                     <div className="text-xl font-bold font-mono-numbers text-red-500">
                       {formatCurrency(result.var_dollar.cvar)}
@@ -257,13 +297,19 @@ export default function VaRPage() {
                 {/* Statistics */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-3 rounded-lg bg-secondary">
-                    <div className="text-xs text-muted-foreground">Ann. Return</div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <span>Ann. Return</span>
+                      <Tooltip content={varTooltips.annualizedReturn} side="top" />
+                    </div>
                     <div className={`font-mono-numbers font-bold ${result.statistics.annualized_return >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                       {result.statistics.annualized_return.toFixed(2)}%
                     </div>
                   </div>
                   <div className="p-3 rounded-lg bg-secondary">
-                    <div className="text-xs text-muted-foreground">Ann. Volatility</div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <span>Ann. Volatility</span>
+                      <Tooltip content={varTooltips.annualizedVolatility} side="top" />
+                    </div>
                     <div className="font-mono-numbers font-bold">
                       {result.statistics.annualized_volatility.toFixed(2)}%
                     </div>

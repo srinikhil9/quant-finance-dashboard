@@ -5,8 +5,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Tooltip, TutorialCard } from "@/components/ui/tooltip";
 import { PlotlyChart, chartColors } from "@/components/charts";
-import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/formatters";
+import { monteCarloTooltips } from "@/lib/tooltips";
+import { formatCurrency, formatPercent } from "@/lib/utils/formatters";
 import { BarChart3, RefreshCw, Play, Loader2 } from "lucide-react";
 
 interface SimulationResult {
@@ -110,11 +112,20 @@ export default function MonteCarloPage() {
             Simulate portfolio paths using Geometric Brownian Motion
           </p>
         </div>
-        <Button variant="outline" onClick={resetToDefaults}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Reset
-        </Button>
+        <Tooltip content="Clear all inputs and return to default values">
+          <Button variant="outline" onClick={resetToDefaults}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        </Tooltip>
       </div>
+
+      {/* Tutorial Card */}
+      <TutorialCard
+        title={monteCarloTooltips.tutorial.title}
+        description={monteCarloTooltips.tutorial.description}
+        steps={monteCarloTooltips.tutorial.steps}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Input Parameters */}

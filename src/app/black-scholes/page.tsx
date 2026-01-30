@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
+import { Tooltip, TutorialCard } from "@/components/ui/tooltip";
 import { PlotlyChart, chartColors } from "@/components/charts";
 import {
   calculateBlackScholes,
@@ -15,6 +16,7 @@ import {
   type OptionType,
   type BlackScholesResult,
 } from "@/lib/calculations/blackScholes";
+import { blackScholesTooltips } from "@/lib/tooltips";
 import { formatCurrency, formatNumber, formatPercent, getProfitLossColor } from "@/lib/utils/formatters";
 import { TrendingUp, TrendingDown, Calculator, RefreshCw } from "lucide-react";
 
@@ -158,11 +160,20 @@ export default function BlackScholesPage() {
             Calculate option prices and Greeks using the Black-Scholes model
           </p>
         </div>
-        <Button variant="outline" onClick={resetToDefaults}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Reset
-        </Button>
+        <Tooltip content="Clear all inputs and return to default values">
+          <Button variant="outline" onClick={resetToDefaults}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        </Tooltip>
       </div>
+
+      {/* Tutorial Card */}
+      <TutorialCard
+        title={blackScholesTooltips.tutorial.title}
+        description={blackScholesTooltips.tutorial.description}
+        steps={blackScholesTooltips.tutorial.steps}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Input Parameters */}
@@ -176,72 +187,106 @@ export default function BlackScholesPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Option Type Toggle */}
-            <div className="flex gap-2">
-              <Button
-                variant={optionType === "call" ? "default" : "outline"}
-                className="flex-1"
-                onClick={() => setOptionType("call")}
-              >
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Call
-              </Button>
-              <Button
-                variant={optionType === "put" ? "default" : "outline"}
-                className="flex-1"
-                onClick={() => setOptionType("put")}
-              >
-                <TrendingDown className="h-4 w-4 mr-2" />
-                Put
-              </Button>
+            <div>
+              <div className="flex items-center gap-1 mb-2">
+                <span className="text-sm font-medium">Option Type</span>
+                <Tooltip content={blackScholesTooltips.optionType} side="right" />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={optionType === "call" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => setOptionType("call")}
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Call
+                </Button>
+                <Button
+                  variant={optionType === "put" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => setOptionType("put")}
+                >
+                  <TrendingDown className="h-4 w-4 mr-2" />
+                  Put
+                </Button>
+              </div>
             </div>
 
-            <Input
-              label="Stock Price (S)"
-              type="number"
-              value={stockPrice}
-              onChange={(e) => setStockPrice(parseFloat(e.target.value) || 0)}
-              min={0}
-              step={1}
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Stock Price (S)</label>
+                <Tooltip content={blackScholesTooltips.stockPrice} side="right" />
+              </div>
+              <Input
+                type="number"
+                value={stockPrice}
+                onChange={(e) => setStockPrice(parseFloat(e.target.value) || 0)}
+                min={0}
+                step={1}
+              />
+            </div>
 
-            <Input
-              label="Strike Price (K)"
-              type="number"
-              value={strikePrice}
-              onChange={(e) => setStrikePrice(parseFloat(e.target.value) || 0)}
-              min={0}
-              step={1}
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Strike Price (K)</label>
+                <Tooltip content={blackScholesTooltips.strikePrice} side="right" />
+              </div>
+              <Input
+                type="number"
+                value={strikePrice}
+                onChange={(e) => setStrikePrice(parseFloat(e.target.value) || 0)}
+                min={0}
+                step={1}
+              />
+            </div>
 
-            <Slider
-              label="Time to Maturity (Years)"
-              value={[timeToMaturity]}
-              onValueChange={([v]) => setTimeToMaturity(v)}
-              min={0.01}
-              max={2}
-              step={0.01}
-              formatValue={(v) => `${(v * 12).toFixed(1)} months`}
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Time to Maturity</label>
+                <Tooltip content={blackScholesTooltips.timeToMaturity} side="right" />
+              </div>
+              <Slider
+                value={[timeToMaturity]}
+                onValueChange={([v]) => setTimeToMaturity(v)}
+                min={0.01}
+                max={2}
+                step={0.01}
+                formatValue={(v) => `${(v * 12).toFixed(1)} months`}
+                showValue
+              />
+            </div>
 
-            <Slider
-              label="Risk-Free Rate"
-              value={[riskFreeRate]}
-              onValueChange={([v]) => setRiskFreeRate(v)}
-              min={0}
-              max={0.15}
-              step={0.005}
-              formatValue={(v) => `${(v * 100).toFixed(1)}%`}
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Risk-Free Rate</label>
+                <Tooltip content={blackScholesTooltips.riskFreeRate} side="right" />
+              </div>
+              <Slider
+                value={[riskFreeRate]}
+                onValueChange={([v]) => setRiskFreeRate(v)}
+                min={0}
+                max={0.15}
+                step={0.005}
+                formatValue={(v) => `${(v * 100).toFixed(1)}%`}
+                showValue
+              />
+            </div>
 
-            <Slider
-              label="Volatility (sigma)"
-              value={[volatility]}
-              onValueChange={([v]) => setVolatility(v)}
-              min={0.05}
-              max={1}
-              step={0.01}
-              formatValue={(v) => `${(v * 100).toFixed(0)}%`}
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Volatility (σ)</label>
+                <Tooltip content={blackScholesTooltips.volatility} side="right" />
+              </div>
+              <Slider
+                value={[volatility]}
+                onValueChange={([v]) => setVolatility(v)}
+                min={0.05}
+                max={1}
+                step={0.01}
+                formatValue={(v) => `${(v * 100).toFixed(0)}%`}
+                showValue
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -256,7 +301,10 @@ export default function BlackScholesPage() {
           <CardContent>
             {/* Price Display */}
             <div className="mb-6 p-6 rounded-xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20">
-              <div className="text-sm text-muted-foreground mb-1">Option Price</div>
+              <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
+                <span>Option Price</span>
+                <Tooltip content={optionType === "call" ? blackScholesTooltips.callPrice : blackScholesTooltips.putPrice} side="right" />
+              </div>
               <div className="text-4xl font-bold font-mono-numbers text-primary">
                 {formatCurrency(result.price)}
               </div>
@@ -268,7 +316,10 @@ export default function BlackScholesPage() {
             {/* Greeks Grid */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="p-4 rounded-lg bg-secondary">
-                <div className="text-xs text-muted-foreground uppercase tracking-wide">Delta</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase tracking-wide">
+                  <span>Delta</span>
+                  <Tooltip content={blackScholesTooltips.delta} side="top" />
+                </div>
                 <div className={`text-xl font-bold font-mono-numbers ${getProfitLossColor(result.greeks.delta)}`}>
                   {formatNumber(result.greeks.delta, 4)}
                 </div>
@@ -276,7 +327,10 @@ export default function BlackScholesPage() {
               </div>
 
               <div className="p-4 rounded-lg bg-secondary">
-                <div className="text-xs text-muted-foreground uppercase tracking-wide">Gamma</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase tracking-wide">
+                  <span>Gamma</span>
+                  <Tooltip content={blackScholesTooltips.gamma} side="top" />
+                </div>
                 <div className="text-xl font-bold font-mono-numbers text-blue-500">
                   {formatNumber(result.greeks.gamma, 4)}
                 </div>
@@ -284,7 +338,10 @@ export default function BlackScholesPage() {
               </div>
 
               <div className="p-4 rounded-lg bg-secondary">
-                <div className="text-xs text-muted-foreground uppercase tracking-wide">Vega</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase tracking-wide">
+                  <span>Vega</span>
+                  <Tooltip content={blackScholesTooltips.vega} side="top" />
+                </div>
                 <div className="text-xl font-bold font-mono-numbers text-purple-500">
                   {formatNumber(result.greeks.vega, 4)}
                 </div>
@@ -292,7 +349,10 @@ export default function BlackScholesPage() {
               </div>
 
               <div className="p-4 rounded-lg bg-secondary">
-                <div className="text-xs text-muted-foreground uppercase tracking-wide">Theta</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase tracking-wide">
+                  <span>Theta</span>
+                  <Tooltip content={blackScholesTooltips.theta} side="top" />
+                </div>
                 <div className={`text-xl font-bold font-mono-numbers ${getProfitLossColor(result.greeks.theta)}`}>
                   {formatNumber(result.greeks.theta, 4)}
                 </div>
@@ -300,7 +360,10 @@ export default function BlackScholesPage() {
               </div>
 
               <div className="p-4 rounded-lg bg-secondary">
-                <div className="text-xs text-muted-foreground uppercase tracking-wide">Rho</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase tracking-wide">
+                  <span>Rho</span>
+                  <Tooltip content={blackScholesTooltips.rho} side="top" />
+                </div>
                 <div className={`text-xl font-bold font-mono-numbers ${getProfitLossColor(result.greeks.rho)}`}>
                   {formatNumber(result.greeks.rho, 4)}
                 </div>

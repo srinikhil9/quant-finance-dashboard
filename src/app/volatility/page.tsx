@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TutorialCard } from "@/components/ui/tooltip";
 import { PlotlyChart, chartColors } from "@/components/charts";
+import { volatilityTooltips } from "@/lib/tooltips";
 import { formatNumber, formatPercent } from "@/lib/utils/formatters";
 import { Activity, RefreshCw, Play, Loader2 } from "lucide-react";
 
@@ -119,11 +121,20 @@ export default function VolatilityPage() {
             Model and forecast volatility with EWMA
           </p>
         </div>
-        <Button variant="outline" onClick={resetToDefaults}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Reset
-        </Button>
+        <Tooltip content="Clear all inputs and return to default values">
+          <Button variant="outline" onClick={resetToDefaults}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        </Tooltip>
       </div>
+
+      {/* Tutorial Card */}
+      <TutorialCard
+        title={volatilityTooltips.tutorial.title}
+        description={volatilityTooltips.tutorial.description}
+        steps={volatilityTooltips.tutorial.steps}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Input Parameters */}
@@ -136,12 +147,17 @@ export default function VolatilityPage() {
             <CardDescription>Configure volatility model</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <Input
-              label="Stock Ticker"
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value.toUpperCase())}
-              placeholder="AAPL"
-            />
+            <div>
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium">Stock Ticker</label>
+                <Tooltip content={volatilityTooltips.ticker} side="right" />
+              </div>
+              <Input
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                placeholder="AAPL"
+              />
+            </div>
 
             <Slider
               label="Lambda (decay factor)"
