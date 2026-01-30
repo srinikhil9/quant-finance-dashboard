@@ -1,21 +1,17 @@
 """
 ML Stock Prediction API - Train and predict stock returns
+Uses numpy-only implementations to avoid scikit-learn dependency
 """
 from http.server import BaseHTTPRequestHandler
 import json
 from urllib.parse import parse_qs, urlparse
-import math
 
 try:
     import numpy as np
     import pandas as pd
-    from sklearn.linear_model import LinearRegression, Ridge, Lasso
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.model_selection import train_test_split
-    from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-    ML_AVAILABLE = True
+    NUMPY_AVAILABLE = True
 except ImportError:
-    ML_AVAILABLE = False
+    NUMPY_AVAILABLE = False
 
 try:
     import yfinance as yf
@@ -33,12 +29,13 @@ def calculate_rsi(prices, period=14):
     avg_gain = np.zeros(len(prices))
     avg_loss = np.zeros(len(prices))
 
-    avg_gain[period] = np.mean(gains[:period])
-    avg_loss[period] = np.mean(losses[:period])
+    if period < len(gains):
+        avg_gain[period] = np.mean(gains[:period])
+        avg_loss[period] = np.mean(losses[:period])
 
-    for i in range(period + 1, len(prices)):
-        avg_gain[i] = (avg_gain[i-1] * (period - 1) + gains[i-1]) / period
-        avg_loss[i] = (avg_loss[i-1] * (period - 1) + losses[i-1]) / period
+        for i in range(period + 1, len(prices)):
+            avg_gain[i] = (avg_gain[i-1] * (period - 1) + gains[i-1]) / period
+            avg_loss[i] = (avg_loss[i-1] * (period - 1) + losses[i-1]) / period
 
     rs = np.where(avg_loss != 0, avg_gain / avg_loss, 0)
     rsi = 100 - (100 / (1 + rs))
@@ -102,27 +99,80 @@ def create_features(df):
     return features
 
 
+class RidgeRegression:
+    """Simple Ridge Regression implementation"""
+    def __init__(self, alpha=1.0):
+        self.alpha = alpha
+        self.coef_ = None
+        self.intercept_ = None
+
+    def fit(self, X, y):
+        X = np.array(X)
+        y = np.array(y)
+
+        # Add intercept
+        X_with_intercept = np.column_stack([np.ones(len(X)), X])
+
+        # Ridge regression: (X'X + alpha*I)^-1 * X'y
+        n_features = X_with_intercept.shape[1]
+        identity = np.eye(n_features)
+        identity[0, 0] = 0  # Don't regularize intercept
+
+        XtX = X_with_intercept.T @ X_with_intercept
+        Xty = X_with_intercept.T @ y
+
+        weights = np.linalg.solve(XtX + self.alpha * identity, Xty)
+
+        self.intercept_ = weights[0]
+        self.coef_ = weights[1:]
+
+        return self
+
+    def predict(self, X):
+        X = np.array(X)
+        return X @ self.coef_ + self.intercept_
+
+
+def r2_score(y_true, y_pred):
+    """Calculate R² score"""
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    ss_res = np.sum((y_true - y_pred) ** 2)
+    ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+    return 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+
+
+def mean_squared_error(y_true, y_pred):
+    """Calculate MSE"""
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    return np.mean((y_true - y_pred) ** 2)
+
+
+def mean_absolute_error(y_true, y_pred):
+    """Calculate MAE"""
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    return np.mean(np.abs(y_true - y_pred))
+
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
 
         try:
-            if not ML_AVAILABLE:
-                raise ImportError("scikit-learn not available")
+            if not NUMPY_AVAILABLE or not YFINANCE_AVAILABLE:
+                raise ImportError("Required packages not available")
 
             ticker = params.get("ticker", ["AAPL"])[0].upper()
             period = params.get("period", ["2y"])[0]
-            model_type = params.get("model", ["ridge"])[0].lower()
 
-            if YFINANCE_AVAILABLE:
-                stock = yf.Ticker(ticker)
-                df = stock.history(period=period)
+            stock = yf.Ticker(ticker)
+            df = stock.history(period=period)
 
-                if df.empty or len(df) < 100:
-                    raise ValueError(f"Insufficient data for {ticker}")
-            else:
-                raise ImportError("yfinance not available")
+            if df.empty or len(df) < 100:
+                raise ValueError(f"Insufficient data for {ticker}")
 
             # Create features
             features = create_features(df)
@@ -142,23 +192,13 @@ class handler(BaseHTTPRequestHandler):
             X = data.drop('target', axis=1)
             y = data['target']
 
-            # Train/test split
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, shuffle=False
-            )
+            # Train/test split (80/20, no shuffle for time series)
+            split_idx = int(len(X) * 0.8)
+            X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+            y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
 
-            # Select and train model
-            models = {
-                'linear': LinearRegression(),
-                'ridge': Ridge(alpha=1.0),
-                'lasso': Lasso(alpha=0.01),
-                'random_forest': RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42)
-            }
-
-            if model_type not in models:
-                model_type = 'ridge'
-
-            model = models[model_type]
+            # Train Ridge Regression
+            model = RidgeRegression(alpha=1.0)
             model.fit(X_train, y_train)
 
             # Predictions
@@ -172,36 +212,31 @@ class handler(BaseHTTPRequestHandler):
             test_mae = mean_absolute_error(y_test, y_pred_test)
 
             # Directional accuracy
-            actual_direction = (y_test > 0).astype(int)
-            pred_direction = (y_pred_test > 0).astype(int)
+            actual_direction = (np.array(y_test) > 0).astype(int)
+            pred_direction = (np.array(y_pred_test) > 0).astype(int)
             directional_accuracy = (actual_direction == pred_direction).mean()
 
-            # Feature importance
-            if model_type == 'random_forest':
-                importance = dict(zip(X.columns, model.feature_importances_))
-            else:
-                importance = dict(zip(X.columns, np.abs(model.coef_) if hasattr(model, 'coef_') else [0]*len(X.columns)))
-
-            # Sort by importance
+            # Feature importance (absolute coefficients)
+            importance = dict(zip(X.columns, np.abs(model.coef_)))
             importance = dict(sorted(importance.items(), key=lambda x: x[1], reverse=True)[:10])
 
             result = {
                 "ticker": ticker,
-                "model": model_type,
+                "model": "ridge",
                 "data_points": len(data),
                 "features_used": len(X.columns),
                 "metrics": {
-                    "train_r2": round(train_r2, 4),
-                    "test_r2": round(test_r2, 4),
-                    "test_rmse": round(test_rmse * 100, 4),  # Convert to percentage
-                    "test_mae": round(test_mae * 100, 4),
-                    "directional_accuracy": round(directional_accuracy, 4),
+                    "train_r2": round(float(train_r2), 4),
+                    "test_r2": round(float(test_r2), 4),
+                    "test_rmse": round(float(test_rmse * 100), 4),
+                    "test_mae": round(float(test_mae * 100), 4),
+                    "directional_accuracy": round(float(directional_accuracy), 4),
                 },
-                "feature_importance": {k: round(v, 4) for k, v in importance.items()},
+                "feature_importance": {k: round(float(v), 6) for k, v in importance.items()},
                 "predictions": {
                     "dates": X_test.index.strftime("%Y-%m-%d").tolist()[-30:],
-                    "actual": (y_test * 100).round(4).tolist()[-30:],
-                    "predicted": (pd.Series(y_pred_test) * 100).round(4).tolist()[-30:],
+                    "actual": [round(float(v) * 100, 4) for v in y_test.tolist()[-30:]],
+                    "predicted": [round(float(v) * 100, 4) for v in y_pred_test[-30:]],
                 },
             }
 

@@ -1,22 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "api/stock-data/index.py": {
-      "maxDuration": 30
-    },
-    "api/monte-carlo/index.py": {
-      "maxDuration": 30
-    },
-    "api/var-calculator/index.py": {
-      "maxDuration": 30
-    },
-    "api/volatility/index.py": {
-      "maxDuration": 30
-    },
-    "api/cointegration/index.py": {
-      "maxDuration": 60
-    },
-    "api/ml-predict/index.py": {
+    "api/*.py": {
       "maxDuration": 60
     }
   }
