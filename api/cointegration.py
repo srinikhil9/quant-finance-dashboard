@@ -23,12 +23,14 @@ except ImportError:
 
 def simple_ols(x, y):
     """Simple OLS regression without sklearn"""
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
     x_mean, y_mean = np.mean(x), np.mean(y)
     numerator = np.sum((x - x_mean) * (y - y_mean))
     denominator = np.sum((x - x_mean) ** 2)
     slope = numerator / denominator if denominator != 0 else 0
     intercept = y_mean - slope * x_mean
-    return slope, intercept
+    return float(slope), float(intercept)
 
 
 def adf_test_simple(series, max_lags=None):
@@ -36,10 +38,11 @@ def adf_test_simple(series, max_lags=None):
     Simplified ADF test using OLS regression
     Returns: (adf_stat, pvalue_approx, is_stationary)
     """
+    series = np.asarray(series, dtype=float)
     n = len(series)
     if max_lags is None:
         max_lags = int(np.floor(12 * (n / 100) ** 0.25))
-    max_lags = min(max_lags, n // 2 - 2)
+    max_lags = max(1, min(max_lags, n // 2 - 2))
 
     # First difference
     diff = np.diff(series)
@@ -105,6 +108,8 @@ def calculate_hedge_ratio(prices1, prices2):
 
 def calculate_spread(prices1, prices2, hedge_ratio):
     """Calculate the spread between two assets"""
+    prices1 = np.asarray(prices1, dtype=float)
+    prices2 = np.asarray(prices2, dtype=float)
     return prices1 - hedge_ratio * prices2
 
 
@@ -145,6 +150,9 @@ def generate_signals(zscore, entry_threshold=2.0, exit_threshold=0.5):
 
 def calculate_strategy_returns(prices1, prices2, signals, hedge_ratio):
     """Calculate strategy returns"""
+    prices1 = np.asarray(prices1, dtype=float)
+    prices2 = np.asarray(prices2, dtype=float)
+    signals = np.asarray(signals, dtype=float)
     returns1 = np.diff(prices1) / prices1[:-1]
     returns2 = np.diff(prices2) / prices2[:-1]
     spread_returns = returns1 - hedge_ratio * returns2

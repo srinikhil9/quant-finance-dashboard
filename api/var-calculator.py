@@ -65,7 +65,8 @@ def conditional_var(returns, confidence_level):
     """Calculate Conditional VaR (Expected Shortfall)"""
     var = historical_var(returns, confidence_level)
     if SCIPY_AVAILABLE:
-        tail_losses = returns[returns <= var]
+        returns_arr = np.array(returns)
+        tail_losses = returns_arr[returns_arr <= var]
         return float(np.mean(tail_losses)) if len(tail_losses) > 0 else var
     else:
         tail_losses = [r for r in returns if r <= var]
