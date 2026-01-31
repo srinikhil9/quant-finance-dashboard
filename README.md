@@ -140,7 +140,7 @@ quant-finance-dashboard/
 
 ## License
 
-MIT License - feel free to use this project for learning or commercial purposes.
+**Proprietary Source-Available License** - This project is the intellectual property of Srinikhil Vemuri. You may view and study the code for personal educational purposes, but commercial use, redistribution, and derivative works are prohibited. See the [LICENSE](LICENSE) file for full terms.
 
 ## Acknowledgments
 
