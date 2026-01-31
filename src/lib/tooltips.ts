@@ -252,6 +252,268 @@ export const fixedIncomeTooltips = {
 };
 
 // ============================================
+// BASKET TRADING MODULE
+// ============================================
+export const basketTradingTooltips = {
+  // Inputs
+  tickers: "Comma-separated list of ETFs or stocks to include in the basket. Diverse assets (stocks, bonds, commodities) often show better cointegration opportunities.",
+  metric: "Optimization target: Sharpe Ratio maximizes risk-adjusted returns, Total Return maximizes absolute profit, Min Drawdown minimizes worst peak-to-trough decline.",
+  entryThreshold: "Z-score level to enter a trade. Higher threshold = fewer but higher conviction trades. Typical: 2.0 (2 standard deviations).",
+  exitThreshold: "Z-score level to exit a trade. Lower values = hold positions longer waiting for full mean reversion.",
+  period: "Historical data period for optimization. Longer periods capture more market regimes but may include outdated relationships.",
+
+  // Outputs
+  baselineWeights: "Weights derived from regression-based cointegration analysis. Serves as a benchmark for the optimized approach.",
+  optimizedWeights: "Weights found by differential evolution that maximize the chosen objective (Sharpe, Return, or Min DD).",
+  sharpeRatio: "Risk-adjusted return measure. Higher is better. Above 1.0 is good, above 2.0 is excellent.",
+  totalReturn: "Total profit/loss from the backtest period, as a percentage.",
+  maxDrawdown: "Largest peak-to-trough decline. Shows worst-case scenario during the period.",
+  convergence: "How the optimizer improved over iterations. Steep initial improvement followed by plateauing indicates good convergence.",
+
+  // Tutorial
+  tutorial: {
+    title: "How to Use Basket Optimization",
+    description: "Optimize cointegration weights across a basket of assets using differential evolution (pseudo-Bayesian optimization).",
+    steps: [
+      "Enter 3-6 ticker symbols (ETFs work well: SPY, QQQ, GLD, TLT, IWM)",
+      "Select optimization target: Sharpe Ratio, Total Return, or Minimum Drawdown",
+      "Adjust entry/exit thresholds for the trading strategy",
+      "Click 'Optimize Basket' to find optimal weights and compare vs baseline"
+    ]
+  }
+};
+
+// ============================================
+// SPO PORTFOLIO MODULE
+// ============================================
+export const spoPortfolioTooltips = {
+  // Inputs
+  tickers: "Comma-separated stock tickers for the portfolio universe. Diversified portfolios work best (mix sectors).",
+  riskAversion: "Controls the return-risk tradeoff (λ in mean-variance). Higher values prioritize lower volatility over higher returns.",
+  period: "Historical data period for training. Longer periods provide more data but may include outdated patterns.",
+
+  // Concepts
+  twoStage: "Traditional approach: (1) Predict returns using ML, (2) Optimize portfolio using predictions. Minimizes prediction error.",
+  spo: "Smart Predict-then-Optimize: Train the prediction model to minimize portfolio decision error, not just prediction error.",
+  decisionError: "The actual portfolio loss caused by prediction errors. SPO directly minimizes this instead of prediction MSE.",
+  predictionMSE: "Mean Squared Error of return predictions. Traditional methods minimize this, but it doesn't always lead to best portfolios.",
+
+  // Outputs
+  efficientFrontier: "The curve showing optimal return for each risk level. Portfolios on the frontier are 'efficient'.",
+  weights: "Portfolio allocation percentages. SPO may allocate differently than traditional methods to reduce decision error.",
+  sharpeRatio: "Risk-adjusted return. Measures excess return per unit of risk.",
+  volatility: "Portfolio standard deviation, annualized. Measures how much the portfolio value fluctuates.",
+
+  // Tutorial
+  tutorial: {
+    title: "How to Use SPO Portfolio Optimization",
+    description: "Compare traditional two-stage optimization vs decision-focused learning (SPO).",
+    steps: [
+      "Select 4-10 stock tickers for your portfolio universe",
+      "Adjust risk aversion (higher = more conservative)",
+      "Choose training period for the models",
+      "Click 'Run SPO' to compare traditional vs SPO approaches"
+    ]
+  }
+};
+
+// ============================================
+// RL HEDGING MODULE
+// ============================================
+export const rlHedgingTooltips = {
+  // Inputs
+  S0: "Current stock price. The underlying asset price at time zero.",
+  K: "Strike price. The price at which the option can be exercised.",
+  T: "Time to expiry in years (e.g., 0.25 = 3 months).",
+  sigma: "Volatility of the underlying asset (annualized). Higher volatility = more hedging needed.",
+  r: "Risk-free interest rate. Used for discounting and in the Black-Scholes formula.",
+  transactionCost: "Cost per dollar traded. Higher costs make frequent rebalancing expensive, affecting optimal hedge strategy.",
+  episodes: "Number of training episodes. More episodes = better learning but slower training.",
+
+  // RL Concepts
+  qLearning: "A reinforcement learning algorithm that learns action values Q(s,a) through trial and error on simulated paths.",
+  state: "The current market situation: moneyness (S/K), time to expiry, and current delta. Discretized into buckets.",
+  action: "The hedging decision: under-hedge (0.8× delta), delta-hedge (1.0× delta), or over-hedge (1.2× delta).",
+  reward: "Negative of hedging error plus transaction costs. Agent learns to minimize total hedging cost.",
+  qTable: "Lookup table of learned action values. Maps each state to expected future rewards for each action.",
+
+  // Outputs
+  meanAbsError: "Average absolute hedging error across test paths. Lower is better.",
+  stdError: "Standard deviation of hedging error. Lower = more consistent hedging performance.",
+  maeReduction: "Percentage improvement in mean absolute error compared to Black-Scholes delta hedging.",
+  learningCurve: "Shows how hedging error decreases as the agent learns. Steep initial drop = fast learning.",
+  histogram: "Distribution of hedging P&L across test paths. Tighter distribution = more reliable hedging.",
+
+  // Tutorial
+  tutorial: {
+    title: "How to Use RL Derivative Hedging",
+    description: "Train a Q-learning agent to learn adaptive delta hedging strategies.",
+    steps: [
+      "Set option parameters (spot, strike, time to expiry, volatility)",
+      "Adjust transaction cost to see its impact on optimal hedging",
+      "Choose number of training episodes (more = better but slower)",
+      "Click 'Train Agent' to run Q-learning and compare vs BS delta hedge"
+    ]
+  }
+};
+
+// ============================================
+// REGIME DETECTION MODULE
+// ============================================
+export const regimeDetectionTooltips = {
+  // Inputs
+  ticker: "The stock or index to analyze. SPY and QQQ are good for market-wide regime detection.",
+  nStates: "Number of hidden states (regimes) in the HMM. 2 = bull/bear, 3 adds a neutral/transition state, 4 captures high/low volatility separately.",
+  period: "Historical data period for training. Longer periods capture more regime transitions but may include outdated patterns.",
+
+  // HMM Concepts
+  hmm: "Hidden Markov Model - assumes the market transitions between unobservable 'regimes' that influence observable returns.",
+  baumWelch: "Expectation-Maximization algorithm that estimates HMM parameters (means, variances, transition probabilities) from data.",
+  viterbi: "Dynamic programming algorithm that finds the most likely sequence of hidden states given the observations.",
+  forwardBackward: "Algorithm that computes the probability of being in each state at each time step. Used in Baum-Welch.",
+  emissionProb: "Probability of observing a return given the current regime. Modeled as Gaussian with regime-specific mean and variance.",
+  transitionMatrix: "Probability of moving from one regime to another. High diagonal = regimes are 'sticky' (persistent).",
+
+  // Outputs
+  currentRegime: "The most likely market regime right now, based on Viterbi decoding of recent returns.",
+  regimeStatistics: "Average return and volatility for each detected regime. Helps label regimes as bull/bear/high-vol/low-vol.",
+  avgDuration: "Average number of days spent in a regime before transitioning. Longer duration = more stable regimes.",
+  transitions: "Total number of regime changes detected. Frequent transitions suggest an unstable market environment.",
+
+  // Tutorial
+  tutorial: {
+    title: "How to Use HMM Regime Detection",
+    description: "Detect hidden market regimes (bull, bear, high-volatility) using Hidden Markov Models with Baum-Welch EM algorithm.",
+    steps: [
+      "Enter a ticker (SPY for market-wide analysis)",
+      "Choose number of regimes (2-4)",
+      "Select historical period for training",
+      "Click 'Detect Regimes' to run HMM and visualize regime switches"
+    ]
+  }
+};
+
+// ============================================
+// STOCK CLUSTERING MODULE
+// ============================================
+export const stockClusteringTooltips = {
+  // Inputs
+  tickers: "Comma-separated stock symbols to cluster. Include stocks from different sectors for meaningful groupings.",
+  nClusters: "Number of clusters (K in K-Means). 3-5 clusters typically work well for diversified portfolios.",
+  features: "Characteristics used for clustering: returns, volatility, momentum, beta. Select features relevant to your investment strategy.",
+  period: "Historical period for calculating features. 1-2 years captures recent behavior.",
+
+  // K-Means Concepts
+  kmeans: "Unsupervised learning algorithm that groups stocks based on behavioral similarity. Stocks in the same cluster have similar characteristics.",
+  kmeanspp: "K-Means++ initialization - smart starting centroids that improve convergence and avoid poor local minima.",
+  centroid: "The center of each cluster, representing 'typical' values for that group's features.",
+  silhouette: "Cluster quality score from -1 to 1. Higher = better-defined clusters. Above 0.5 is good, above 0.7 is excellent.",
+  inertia: "Within-cluster sum of squared distances. Lower = tighter clusters, but decreases with more clusters (use silhouette instead).",
+
+  // Outputs
+  clusterAssignments: "Which cluster each stock belongs to. Stocks in the same cluster behave similarly.",
+  pcaVisualization: "2D scatter plot using Principal Component Analysis. Shows how stocks are grouped in reduced feature space.",
+  clusterPortfolios: "Equal-weight portfolios built from each cluster. Use for sector-style diversification or factor exposure.",
+  clusterCharacteristics: "Average return, volatility, and momentum for each cluster. Helps label clusters (growth, defensive, etc.).",
+
+  // Tutorial
+  tutorial: {
+    title: "How to Use Stock Clustering",
+    description: "Group stocks by behavioral patterns using K-Means clustering. Build diversified portfolios from each cluster.",
+    steps: [
+      "Enter 10-30 stock tickers (mix of sectors works best)",
+      "Choose number of clusters (3-6)",
+      "Select features for clustering (returns, volatility, momentum, beta)",
+      "Click 'Run Clustering' to see groups and build cluster portfolios"
+    ]
+  }
+};
+
+// ============================================
+// ANOMALY DETECTION MODULE
+// ============================================
+export const anomalyDetectionTooltips = {
+  // Inputs
+  ticker: "The stock or index to monitor for anomalies. SPY is good for market-wide unusual conditions.",
+  contamination: "Expected proportion of anomalies (0.01-0.15). Lower = fewer but more extreme anomalies. 5% is typical.",
+  period: "Historical period to analyze. Longer periods provide more context for what's 'normal' vs 'abnormal'.",
+
+  // Isolation Forest Concepts
+  isolationForest: "Unsupervised algorithm that identifies anomalies by how easily they can be 'isolated' from normal data using random splits.",
+  pathLength: "Average number of splits needed to isolate a point. Anomalies are isolated quickly (short paths), normal points take longer.",
+  anomalyScore: "Score from 0 to 1 indicating how anomalous each observation is. Higher = more unusual. Score > threshold = anomaly.",
+  threshold: "The score cutoff for flagging anomalies. Determined by the contamination rate you set.",
+  nTrees: "Number of isolation trees in the forest. More trees = more stable scores (100 is typical).",
+
+  // Features Analyzed
+  featureReturn: "Daily price return - large positive or negative moves are often anomalous.",
+  featureVolume: "Volume spike relative to moving average - unusual trading activity may signal anomalies.",
+  featureVolatility: "Short-term vs long-term volatility - sudden volatility changes are often anomalous.",
+  featureGap: "Overnight price gap - large gaps between close and next open indicate unusual events.",
+  featureRange: "Intraday range (high-low)/close - unusually wide ranges suggest market stress.",
+
+  // Outputs
+  anomalyCount: "Total number of detected anomalies in the period. Compare to expected count (contamination × data points).",
+  detectedCrises: "Known market events (COVID crash, etc.) that were successfully identified as anomalies.",
+  featureImportance: "Which features contribute most to anomaly detection. Helps understand what makes an observation unusual.",
+
+  // Tutorial
+  tutorial: {
+    title: "How to Use Anomaly Detection",
+    description: "Detect unusual market conditions using Isolation Forest, an unsupervised ML algorithm for outlier detection.",
+    steps: [
+      "Enter a ticker (SPY for market-wide analysis)",
+      "Adjust contamination rate (expected % of anomalies)",
+      "Select historical period to analyze",
+      "Click 'Detect Anomalies' to identify unusual market conditions"
+    ]
+  }
+};
+
+// ============================================
+// RL REBALANCING MODULE
+// ============================================
+export const rlRebalancingTooltips = {
+  // Inputs
+  tickers: "Comma-separated tickers for the portfolio (e.g., SPY,TLT for 60/40 stocks/bonds).",
+  weights: "Target portfolio weights as percentages (must sum to 100). E.g., '60,40' for 60% SPY, 40% TLT.",
+  transactionCost: "Cost per dollar traded (in basis points). Higher costs make the RL agent more reluctant to rebalance.",
+  rebalanceThreshold: "For calendar rebalancing comparison: maximum drift allowed before forced rebalance.",
+  episodes: "Number of Q-learning training episodes. More episodes = better policy but slower training.",
+
+  // RL Concepts
+  qLearning: "Reinforcement learning algorithm that learns optimal actions by exploring different scenarios and updating value estimates.",
+  state: "Current portfolio situation: (drift level, volatility regime, days since last rebalance). Discretized into buckets.",
+  action: "Binary decision: rebalance now or wait. RL agent learns when rebalancing benefits outweigh transaction costs.",
+  reward: "Negative of tracking error minus transaction costs. Agent maximizes cumulative reward over time.",
+  trackingError: "Deviation of actual portfolio weights from target weights. Accumulates over time without rebalancing.",
+
+  // Comparison Strategies
+  rlPolicy: "Learned policy from Q-learning. Dynamically decides when to rebalance based on current state.",
+  monthlyRebalance: "Fixed calendar strategy: rebalance on the first trading day of each month regardless of drift.",
+  quarterlyRebalance: "Fixed calendar strategy: rebalance on the first trading day of each quarter.",
+  thresholdRebalance: "Rule-based: rebalance only when any weight drifts beyond a fixed percentage threshold.",
+
+  // Outputs
+  trackingErrorComparison: "Compares cumulative tracking error across strategies. Lower = better alignment with target.",
+  transactionCostSavings: "How much the RL policy saves in transaction costs vs calendar rebalancing.",
+  rebalanceFrequency: "How often each strategy triggers rebalancing. RL should be more efficient (fewer trades, similar tracking).",
+  policyVisualization: "Heatmap of Q-values showing what action the RL agent prefers in each state.",
+
+  // Tutorial
+  tutorial: {
+    title: "How to Use RL Portfolio Rebalancing",
+    description: "Learn when to rebalance a portfolio using Q-learning. Minimizes tracking error while controlling transaction costs.",
+    steps: [
+      "Enter portfolio tickers and target weights (e.g., SPY,TLT at 60,40)",
+      "Set transaction cost (higher = less frequent optimal rebalancing)",
+      "Choose number of training episodes",
+      "Click 'Train Agent' to learn optimal rebalancing policy and compare vs calendar strategies"
+    ]
+  }
+};
+
+// ============================================
 // COMMON/SHARED TOOLTIPS
 // ============================================
 export const commonTooltips = {

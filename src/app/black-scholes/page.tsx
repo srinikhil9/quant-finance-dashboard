@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TutorialCard } from "@/components/ui/tooltip";
 import { PlotlyChart, chartColors } from "@/components/charts";
+import { ResultInterpretation, type InterpretationData } from "@/components/ui/result-interpretation";
 import {
   calculateBlackScholes,
   calculateImpliedVolatility,
@@ -18,7 +19,94 @@ import {
 } from "@/lib/calculations/blackScholes";
 import { blackScholesTooltips } from "@/lib/tooltips";
 import { formatCurrency, formatNumber, formatPercent, getProfitLossColor } from "@/lib/utils/formatters";
-import { TrendingUp, TrendingDown, Calculator, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, Calculator, RefreshCw, Search, Loader2, CheckCircle } from "lucide-react";
+import { trackCalculation } from "@/lib/analytics";
+
+interface StockQuote {
+  ticker: string;
+  name: string;
+  price: number;
+  volatility: number;
+  volatility_percent: number;
+  timestamp: string;
+}
+
+function getBlackScholesInterpretation(
+  result: BlackScholesResult,
+  stockPrice: number,
+  strikePrice: number,
+  optionType: OptionType
+): InterpretationData {
+  const intrinsicValue = optionType === "call"
+    ? Math.max(0, stockPrice - strikePrice)
+    : Math.max(0, strikePrice - stockPrice);
+  const timeValue = result.price - intrinsicValue;
+  const premiumPct = (result.price / stockPrice) * 100;
+
+  // Determine moneyness
+  let moneyness: string;
+  let moneynessDesc: string;
+  const pctFromStrike = ((stockPrice - strikePrice) / strikePrice) * 100;
+
+  if (optionType === "call") {
+    if (stockPrice > strikePrice * 1.02) {
+      moneyness = "In-the-Money (ITM)";
+      moneynessDesc = `The stock is ${pctFromStrike.toFixed(1)}% above the strike price - this option has intrinsic value`;
+    } else if (stockPrice < strikePrice * 0.98) {
+      moneyness = "Out-of-the-Money (OTM)";
+      moneynessDesc = `The stock is ${Math.abs(pctFromStrike).toFixed(1)}% below the strike price - currently worthless if exercised`;
+    } else {
+      moneyness = "At-the-Money (ATM)";
+      moneynessDesc = "The stock price is near the strike price - high time value";
+    }
+  } else {
+    if (stockPrice < strikePrice * 0.98) {
+      moneyness = "In-the-Money (ITM)";
+      moneynessDesc = `The stock is ${Math.abs(pctFromStrike).toFixed(1)}% below the strike price - this option has intrinsic value`;
+    } else if (stockPrice > strikePrice * 1.02) {
+      moneyness = "Out-of-the-Money (OTM)";
+      moneynessDesc = `The stock is ${pctFromStrike.toFixed(1)}% above the strike price - currently worthless if exercised`;
+    } else {
+      moneyness = "At-the-Money (ATM)";
+      moneynessDesc = "The stock price is near the strike price - high time value";
+    }
+  }
+
+  // Determine status based on delta and theta
+  const deltaQuality = Math.abs(result.greeks.delta);
+  let status: InterpretationData["status"] = "neutral";
+  if (deltaQuality > 0.7) status = "positive";
+  else if (deltaQuality < 0.3) status = "negative";
+
+  const points: string[] = [
+    `${moneyness}: ${moneynessDesc}`,
+    `Option cost is ${premiumPct.toFixed(2)}% of the stock price (${formatCurrency(result.price)} per share)`,
+    `Delta = ${result.greeks.delta.toFixed(3)}: For every $1 the stock moves, this option moves ~${formatCurrency(Math.abs(result.greeks.delta))}`,
+    `Theta = ${result.greeks.theta.toFixed(4)}: You're losing ${formatCurrency(Math.abs(result.greeks.theta))} per day to time decay`,
+  ];
+
+  if (timeValue > 0) {
+    points.push(`Time value: ${formatCurrency(timeValue)} (${((timeValue / result.price) * 100).toFixed(1)}% of premium) - erodes as expiration approaches`);
+  }
+
+  let advice: string;
+  if (Math.abs(result.greeks.theta) > 0.1) {
+    advice = "High time decay! Consider shorter holding periods or selling options instead of buying.";
+  } else if (deltaQuality < 0.2) {
+    advice = "Low delta means low probability of profit. These are high-risk lottery tickets.";
+  } else if (deltaQuality > 0.8) {
+    advice = "High delta behaves almost like owning the stock. Consider if the leverage is worth the premium.";
+  } else {
+    advice = "Moderate risk profile. Monitor delta and adjust position size based on your conviction.";
+  }
+
+  return {
+    status,
+    summary: `This ${optionType} option is ${moneyness} and costs ${formatCurrency(result.price)} per share.`,
+    points,
+    advice,
+  };
+}
 
 export default function BlackScholesPage() {
   // Input parameters
@@ -29,8 +117,71 @@ export default function BlackScholesPage() {
   const [volatility, setVolatility] = useState(0.2); // 20%
   const [optionType, setOptionType] = useState<OptionType>("call");
 
+  // Ticker lookup state
+  const [lookupTicker, setLookupTicker] = useState("");
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [stockQuote, setStockQuote] = useState<StockQuote | null>(null);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
   // Implied volatility inputs
   const [marketPrice, setMarketPrice] = useState(3.5);
+
+  // Fetch stock quote using Monte Carlo API (which uses yfinance)
+  // We request a minimal simulation just to get the price and volatility
+  const fetchStockQuote = async () => {
+    if (!lookupTicker.trim()) return;
+
+    setLookupLoading(true);
+    setLookupError(null);
+    const startTime = performance.now();
+
+    const inputParams = {
+      ticker: lookupTicker.toUpperCase(),
+    };
+
+    try {
+      // Use Monte Carlo API with minimal settings to get stock data
+      const params = new URLSearchParams({
+        ticker: lookupTicker.toUpperCase(),
+        investment: "1000",
+        horizon: "0.25",
+        simulations: "100",  // Minimal simulations just to get the data
+      });
+
+      const response = await fetch(`/api/monte-carlo?${params}`);
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Extract price and volatility from Monte Carlo response
+      const quote: StockQuote = {
+        ticker: data.ticker,
+        name: data.ticker, // Monte Carlo doesn't return company name
+        price: data.current_price,
+        volatility: data.parameters.annualized_volatility / 100, // Convert from percentage
+        volatility_percent: data.parameters.annualized_volatility,
+        timestamp: new Date().toISOString(),
+      };
+
+      setStockQuote(quote);
+      // Auto-fill the form
+      setStockPrice(quote.price);
+      setVolatility(quote.volatility);
+
+      // Track successful stock lookup
+      trackCalculation('black-scholes', inputParams, quote as unknown as Record<string, unknown>, Math.round(performance.now() - startTime));
+    } catch (err) {
+      setLookupError(err instanceof Error ? err.message : "Failed to fetch stock data");
+      setStockQuote(null);
+
+      // Track failed stock lookup
+      trackCalculation('black-scholes', inputParams, { error: err instanceof Error ? err.message : 'Unknown error' }, Math.round(performance.now() - startTime));
+    } finally {
+      setLookupLoading(false);
+    }
+  };
 
   // Calculate results
   const result: BlackScholesResult = useMemo(() => {
@@ -43,6 +194,11 @@ export default function BlackScholesPage() {
       optionType,
     });
   }, [stockPrice, strikePrice, timeToMaturity, riskFreeRate, volatility, optionType]);
+
+  // Generate interpretation
+  const interpretation = useMemo(() => {
+    return getBlackScholesInterpretation(result, stockPrice, strikePrice, optionType);
+  }, [result, stockPrice, strikePrice, optionType]);
 
   // Calculate implied volatility
   const impliedVol = useMemo(() => {
@@ -148,6 +304,9 @@ export default function BlackScholesPage() {
     setVolatility(0.2);
     setOptionType("call");
     setMarketPrice(3.5);
+    setStockQuote(null);
+    setLookupTicker("");
+    setLookupError(null);
   };
 
   return (
@@ -186,6 +345,54 @@ export default function BlackScholesPage() {
             <CardDescription>Adjust option parameters</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Stock Lookup Section */}
+            <div className="p-4 rounded-lg bg-secondary/50 border border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Quick Stock Lookup</span>
+                <span className="text-xs text-muted-foreground">(Optional)</span>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={lookupTicker}
+                  onChange={(e) => setLookupTicker(e.target.value.toUpperCase())}
+                  placeholder="AAPL"
+                  className="flex-1"
+                  onKeyDown={(e) => e.key === "Enter" && fetchStockQuote()}
+                />
+                <Button
+                  variant="outline"
+                  onClick={fetchStockQuote}
+                  disabled={lookupLoading || !lookupTicker.trim()}
+                >
+                  {lookupLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Fetch"
+                  )}
+                </Button>
+              </div>
+              {stockQuote && (
+                <div className="mt-3 p-2 rounded bg-green-500/10 border border-green-500/20">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="font-medium">{stockQuote.ticker}</span>
+                    <span className="text-muted-foreground">{stockQuote.name}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Price: <span className="font-mono">${stockQuote.price.toFixed(2)}</span> |
+                    Volatility: <span className="font-mono">{stockQuote.volatility_percent.toFixed(1)}%</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    (Auto-filled below - edit as needed)
+                  </div>
+                </div>
+              )}
+              {lookupError && (
+                <div className="mt-2 text-xs text-red-500">{lookupError}</div>
+              )}
+            </div>
+
             {/* Option Type Toggle */}
             <div>
               <div className="flex items-center gap-1 mb-2">
@@ -314,7 +521,7 @@ export default function BlackScholesPage() {
             </div>
 
             {/* Greeks Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
               <div className="p-4 rounded-lg bg-secondary">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase tracking-wide">
                   <span>Delta</span>
@@ -370,6 +577,9 @@ export default function BlackScholesPage() {
                 <div className="text-xs text-muted-foreground">Rate sensitivity</div>
               </div>
             </div>
+
+            {/* Result Interpretation */}
+            <ResultInterpretation data={interpretation} />
           </CardContent>
         </Card>
       </div>

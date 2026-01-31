@@ -8,6 +8,18 @@ import {
   GitCompare,
   Landmark,
   ArrowRight,
+  Sparkles,
+  Target,
+  Bot,
+  Eye,
+  Grid3X3,
+  ShieldAlert,
+  Download,
+  FileCode,
+  Cpu,
+  Network,
+  MessageSquare,
+  Layers,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
@@ -68,6 +80,60 @@ const modules = [
     color: "text-orange-500",
     features: ["Bond Valuation", "Duration & Convexity", "Yield Curve Analysis"],
   },
+  {
+    href: "/basket-trading",
+    title: "Basket Optimization",
+    description: "Optimize cointegration weights using Bayesian optimization",
+    icon: Sparkles,
+    color: "text-pink-500",
+    badge: "New",
+    features: ["Differential Evolution", "Multi-Asset Baskets", "Sharpe Maximization"],
+  },
+  {
+    href: "/spo-portfolio",
+    title: "SPO Portfolio",
+    description: "End-to-end decision-focused portfolio optimization",
+    icon: Target,
+    color: "text-indigo-500",
+    badge: "New",
+    features: ["Decision-Focused Learning", "Mean-Variance Optimization", "Prediction vs Decision Error"],
+  },
+  {
+    href: "/rl-hedging",
+    title: "RL Hedging",
+    description: "Adaptive delta hedging with reinforcement learning",
+    icon: Bot,
+    color: "text-emerald-500",
+    badge: "New",
+    features: ["Q-Learning Agent", "Transaction Cost Aware", "Dynamic Hedging Policy"],
+  },
+  {
+    href: "/regime-detection",
+    title: "Regime Detection",
+    description: "Detect market regimes using Hidden Markov Models",
+    icon: Eye,
+    color: "text-rose-500",
+    badge: "New",
+    features: ["Baum-Welch EM Algorithm", "Viterbi Decoding", "Regime Statistics"],
+  },
+  {
+    href: "/stock-clustering",
+    title: "Stock Clustering",
+    description: "Group stocks by behavior patterns with K-Means",
+    icon: Grid3X3,
+    color: "text-teal-500",
+    badge: "New",
+    features: ["K-Means++", "PCA Visualization", "Cluster Portfolios"],
+  },
+  {
+    href: "/anomaly-detection",
+    title: "Anomaly Detection",
+    description: "Detect unusual market conditions with Isolation Forest",
+    icon: ShieldAlert,
+    color: "text-amber-500",
+    badge: "New",
+    features: ["Isolation Forest", "Crisis Detection", "Feature Importance"],
+  },
 ];
 
 export default function Home() {
@@ -89,7 +155,7 @@ export default function Home() {
             <span>Live Market Data via yFinance</span>
           </div>
           <div className="text-sm text-muted-foreground">|</div>
-          <div className="text-sm text-muted-foreground">7 Interactive Modules</div>
+          <div className="text-sm text-muted-foreground">13 Interactive Modules</div>
         </div>
       </section>
 
@@ -105,10 +171,17 @@ export default function Home() {
                     <div className={`p-2 rounded-lg bg-secondary ${module.color}`}>
                       <Icon className="h-6 w-6" />
                     </div>
-                    <div>
-                      <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                        {module.title}
-                      </CardTitle>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                          {module.title}
+                        </CardTitle>
+                        {"badge" in module && module.badge && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded bg-primary/20 text-primary">
+                            {module.badge}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <CardDescription className="mt-2">
@@ -142,7 +215,7 @@ export default function Home() {
       <section className="grid gap-4 md:grid-cols-4">
         <Card className="bg-gradient-to-br from-green-500/10 to-transparent border-green-500/20">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-500">7</div>
+            <div className="text-2xl font-bold text-green-500">13</div>
             <div className="text-sm text-muted-foreground">Financial Models</div>
           </CardContent>
         </Card>
@@ -154,7 +227,7 @@ export default function Home() {
         </Card>
         <Card className="bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-purple-500">4</div>
+            <div className="text-2xl font-bold text-purple-500">6</div>
             <div className="text-sm text-muted-foreground">ML Algorithms</div>
           </CardContent>
         </Card>
@@ -164,6 +237,113 @@ export default function Home() {
             <div className="text-sm text-muted-foreground">Market Data</div>
           </CardContent>
         </Card>
+      </section>
+
+      {/* Deep Learning Notebooks Section */}
+      <section className="space-y-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold">Deep Learning Notebooks</h2>
+          <p className="text-muted-foreground mt-1">
+            Advanced ML projects requiring PyTorch/TensorFlow - download and run locally
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              title: "Neural Black-Scholes",
+              description: "Physics-informed neural networks for option pricing with automatic Greeks via autodiff",
+              icon: Cpu,
+              color: "text-violet-500",
+              href: "/notebooks/neural-black-scholes.ipynb",
+              libs: ["PyTorch", "SciPy"],
+            },
+            {
+              title: "LSTM/Transformer HFT",
+              description: "Sequence models for high-frequency trading prediction with attention mechanisms",
+              icon: Layers,
+              color: "text-sky-500",
+              href: "/notebooks/lstm-hft-prediction.ipynb",
+              libs: ["PyTorch", "sklearn"],
+            },
+            {
+              title: "VAE Factor Discovery",
+              description: "Variational autoencoders for discovering latent factors in stock returns",
+              icon: Brain,
+              color: "text-fuchsia-500",
+              href: "/notebooks/autoencoder-factors.ipynb",
+              libs: ["PyTorch", "sklearn"],
+            },
+            {
+              title: "DQN Portfolio",
+              description: "Deep Q-Network for portfolio allocation with experience replay and dueling architecture",
+              icon: Bot,
+              color: "text-emerald-500",
+              href: "/notebooks/rl-portfolio-dqn.ipynb",
+              libs: ["PyTorch", "Gym"],
+            },
+            {
+              title: "NLP Earnings Sentiment",
+              description: "FinBERT transformer for analyzing earnings call transcripts and generating signals",
+              icon: MessageSquare,
+              color: "text-amber-500",
+              href: "/notebooks/nlp-earnings-sentiment.ipynb",
+              libs: ["Transformers", "PyTorch"],
+            },
+            {
+              title: "GNN Stock Network",
+              description: "Graph neural networks for modeling stock relationships and network effects",
+              icon: Network,
+              color: "text-rose-500",
+              href: "/notebooks/gnn-stock-network.ipynb",
+              libs: ["PyTorch Geometric", "NetworkX"],
+            },
+          ].map((notebook) => {
+            const Icon = notebook.icon;
+            return (
+              <a
+                key={notebook.href}
+                href={notebook.href}
+                download
+                className="block"
+              >
+                <Card className="h-full card-hover cursor-pointer group border-border hover:border-primary/50 transition-colors">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-lg bg-secondary ${notebook.color}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-sm group-hover:text-primary transition-colors truncate">
+                            {notebook.title}
+                          </h3>
+                          <FileCode className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                          {notebook.description}
+                        </p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {notebook.libs.map((lib) => (
+                            <span
+                              key={lib}
+                              className="px-1.5 py-0.5 text-[10px] rounded bg-secondary text-muted-foreground"
+                            >
+                              {lib}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="mt-3 flex items-center text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Download className="h-3 w-3 mr-1" />
+                          <span>Download .ipynb</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </a>
+            );
+          })}
+        </div>
       </section>
     </div>
   );

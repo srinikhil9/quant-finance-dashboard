@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
 } from "@/lib/calculations/bondPricing";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/formatters";
 import { Landmark, RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
+import { trackCalculation } from "@/lib/analytics";
 
 export default function FixedIncomePage() {
   // Bond parameters
@@ -49,6 +50,44 @@ export default function FixedIncomePage() {
   const summary = useMemo(() => {
     return calculateBondSummary(bondParams, ytm);
   }, [bondParams, ytm]);
+
+  // Track calculations with debounce to avoid tracking every keystroke
+  const trackingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTrackedRef = useRef<string>('');
+
+  useEffect(() => {
+    // Create a unique key for the current calculation
+    const calcKey = JSON.stringify({ bondParams, ytm });
+
+    // Skip if this exact calculation was already tracked
+    if (calcKey === lastTrackedRef.current) return;
+
+    // Clear any pending tracking
+    if (trackingTimeoutRef.current) {
+      clearTimeout(trackingTimeoutRef.current);
+    }
+
+    // Debounce tracking by 500ms
+    trackingTimeoutRef.current = setTimeout(() => {
+      const startTime = performance.now();
+      const inputParams = {
+        faceValue: bondParams.faceValue,
+        couponRate: bondParams.couponRate,
+        yearsToMaturity: bondParams.yearsToMaturity,
+        couponFrequency: bondParams.couponFrequency,
+        ytm,
+      };
+
+      trackCalculation('fixed-income', inputParams, summary as unknown as Record<string, unknown>, Math.round(performance.now() - startTime));
+      lastTrackedRef.current = calcKey;
+    }, 500);
+
+    return () => {
+      if (trackingTimeoutRef.current) {
+        clearTimeout(trackingTimeoutRef.current);
+      }
+    };
+  }, [bondParams, ytm, summary]);
 
   // Calculate YTM from market price
   const calculatedYtm = useMemo(() => {

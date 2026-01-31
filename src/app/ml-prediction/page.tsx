@@ -10,6 +10,7 @@ import { PlotlyChart, chartColors } from "@/components/charts";
 import { mlPredictionTooltips } from "@/lib/tooltips";
 import { formatNumber, formatPercent } from "@/lib/utils/formatters";
 import { Brain, RefreshCw, Play, Loader2 } from "lucide-react";
+import { trackCalculation } from "@/lib/analytics";
 
 interface MLResult {
   ticker: string;
@@ -43,6 +44,13 @@ export default function MLPredictionPage() {
   const runPrediction = async () => {
     setLoading(true);
     setError(null);
+    const startTime = performance.now();
+
+    const inputParams = {
+      ticker,
+      period,
+      model: modelType,
+    };
 
     try {
       const params = new URLSearchParams({
@@ -59,8 +67,14 @@ export default function MLPredictionPage() {
       }
 
       setResult(data);
+
+      // Track successful prediction
+      trackCalculation('ml-prediction', inputParams, data, Math.round(performance.now() - startTime));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Prediction failed");
+
+      // Track failed prediction
+      trackCalculation('ml-prediction', inputParams, { error: err instanceof Error ? err.message : 'Unknown error' }, Math.round(performance.now() - startTime));
     } finally {
       setLoading(false);
     }

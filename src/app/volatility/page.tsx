@@ -11,6 +11,7 @@ import { PlotlyChart, chartColors } from "@/components/charts";
 import { volatilityTooltips } from "@/lib/tooltips";
 import { formatNumber, formatPercent } from "@/lib/utils/formatters";
 import { Activity, RefreshCw, Play, Loader2 } from "lucide-react";
+import { trackCalculation } from "@/lib/analytics";
 
 interface VolatilityResult {
   ticker: string;
@@ -47,6 +48,14 @@ export default function VolatilityPage() {
   const calculateVolatility = async () => {
     setLoading(true);
     setError(null);
+    const startTime = performance.now();
+
+    const inputParams = {
+      ticker,
+      lambda: lambdaParam,
+      period,
+      forecast_horizon: forecastHorizon,
+    };
 
     try {
       const params = new URLSearchParams({
@@ -64,8 +73,14 @@ export default function VolatilityPage() {
       }
 
       setResult(data);
+
+      // Track successful calculation
+      trackCalculation('volatility', inputParams, data, Math.round(performance.now() - startTime));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Calculation failed");
+
+      // Track failed calculation
+      trackCalculation('volatility', inputParams, { error: err instanceof Error ? err.message : 'Unknown error' }, Math.round(performance.now() - startTime));
     } finally {
       setLoading(false);
     }

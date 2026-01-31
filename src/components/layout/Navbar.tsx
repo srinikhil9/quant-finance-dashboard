@@ -10,13 +10,68 @@ import {
   Brain,
   GitCompare,
   Landmark,
+  Sparkles,
+  Target,
+  Bot,
+  Eye,
+  Grid3X3,
+  ShieldAlert,
   Menu,
-  X
+  X,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
-const navItems = [
+// Types for navigation
+type NavItem = { href: string; label: string; icon: React.ElementType };
+type NavDropdown = { label: string; icon: React.ElementType; items: NavItem[] };
+type NavGroup = NavItem | NavDropdown;
+
+// Navigation structure with dropdown groups
+const navGroups: NavGroup[] = [
+  { href: "/", label: "Overview", icon: Activity },
+  {
+    label: "Pricing",
+    icon: TrendingUp,
+    items: [
+      { href: "/black-scholes", label: "Options", icon: TrendingUp },
+      { href: "/fixed-income", label: "Bonds", icon: Landmark },
+    ],
+  },
+  {
+    label: "Risk",
+    icon: LineChart,
+    items: [
+      { href: "/var", label: "VaR Calculator", icon: LineChart },
+      { href: "/volatility", label: "Volatility", icon: Activity },
+      { href: "/monte-carlo", label: "Monte Carlo", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "ML & Trading",
+    icon: Brain,
+    items: [
+      { href: "/ml-prediction", label: "ML Predict", icon: Brain },
+      { href: "/pairs-trading", label: "Pairs Trading", icon: GitCompare },
+      { href: "/basket-trading", label: "Basket", icon: Sparkles },
+    ],
+  },
+  {
+    label: "Advanced",
+    icon: Target,
+    items: [
+      { href: "/spo-portfolio", label: "SPO Portfolio", icon: Target },
+      { href: "/rl-hedging", label: "RL Hedging", icon: Bot },
+      { href: "/regime-detection", label: "Regime Detection", icon: Eye },
+      { href: "/stock-clustering", label: "Stock Clustering", icon: Grid3X3 },
+      { href: "/anomaly-detection", label: "Anomaly Detection", icon: ShieldAlert },
+    ],
+  },
+];
+
+// Flat list for mobile
+const allNavItems = [
   { href: "/", label: "Overview", icon: Activity },
   { href: "/black-scholes", label: "Options", icon: TrendingUp },
   { href: "/monte-carlo", label: "Monte Carlo", icon: BarChart3 },
@@ -25,7 +80,81 @@ const navItems = [
   { href: "/ml-prediction", label: "ML Predict", icon: Brain },
   { href: "/pairs-trading", label: "Pairs", icon: GitCompare },
   { href: "/fixed-income", label: "Bonds", icon: Landmark },
+  { href: "/basket-trading", label: "Basket", icon: Sparkles },
+  { href: "/spo-portfolio", label: "SPO", icon: Target },
+  { href: "/rl-hedging", label: "RL Hedge", icon: Bot },
+  { href: "/regime-detection", label: "Regimes", icon: Eye },
+  { href: "/stock-clustering", label: "Cluster", icon: Grid3X3 },
+  { href: "/anomaly-detection", label: "Anomaly", icon: ShieldAlert },
 ];
+
+function DropdownMenu({
+  group,
+  pathname
+}: {
+  group: NavDropdown;
+  pathname: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const Icon = group.icon;
+
+  const isActiveGroup = group.items.some(item => pathname === item.href);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+          isActiveGroup
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        <span>{group.label}</span>
+        <ChevronDown className={cn("h-3 w-3 transition-transform", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 py-2 w-48 rounded-lg border border-border bg-background shadow-lg z-50">
+          {group.items.map((item) => {
+            const ItemIcon = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setIsOpen(false)}
+                className={cn(
+                  "flex items-center space-x-2 px-4 py-2 text-sm transition-colors",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                )}
+              >
+                <ItemIcon className="h-4 w-4" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -45,26 +174,40 @@ export function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation with Dropdowns */}
           <div className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </Link>
-              );
+            {navGroups.map((group) => {
+              if ('href' in group) {
+                // Single item (Overview)
+                const navItem = group as NavItem;
+                const Icon = navItem.icon;
+                const isActive = pathname === navItem.href;
+                return (
+                  <Link
+                    key={navItem.href}
+                    href={navItem.href}
+                    className={cn(
+                      "flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{navItem.label}</span>
+                  </Link>
+                );
+              } else {
+                // Dropdown group
+                const dropdown = group as NavDropdown;
+                return (
+                  <DropdownMenu
+                    key={dropdown.label}
+                    group={dropdown}
+                    pathname={pathname}
+                  />
+                );
+              }
             })}
           </div>
 
@@ -83,8 +226,8 @@ export function Navbar() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 space-y-1 border-t border-border">
-            {navItems.map((item) => {
+          <div className="md:hidden py-4 space-y-1 border-t border-border max-h-[70vh] overflow-y-auto">
+            {allNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (

@@ -1,11 +1,11 @@
 """
-Monte Carlo Simulation API - GBM-based portfolio path simulation
+Monte Carlo Portfolio Simulation API
+Simulates future portfolio paths using Geometric Brownian Motion (GBM)
 """
 from http.server import BaseHTTPRequestHandler
 import json
 from urllib.parse import parse_qs, urlparse
 import math
-import random
 
 try:
     import numpy as np
@@ -13,128 +13,128 @@ try:
 except ImportError:
     NUMPY_AVAILABLE = False
 
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError:
+    YFINANCE_AVAILABLE = False
 
-def simulate_gbm(S0, mu, sigma, T, dt, n_simulations):
-    """
-    Simulate Geometric Brownian Motion paths
 
-    S(t+dt) = S(t) * exp((mu - 0.5*sigma^2)*dt + sigma*sqrt(dt)*Z)
-    """
+def gbm_simulation(S0, mu, sigma, T, dt, n_paths):
+    """Simulate GBM paths using numpy for efficiency"""
     n_steps = int(T / dt)
 
     if NUMPY_AVAILABLE:
-        # Use numpy for faster computation
-        paths = np.zeros((n_simulations, n_steps + 1))
-        paths[:, 0] = S0
-
-        for t in range(1, n_steps + 1):
-            Z = np.random.standard_normal(n_simulations)
-            paths[:, t] = paths[:, t-1] * np.exp(
-                (mu - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z
-            )
-
-        return paths
+        # Vectorized simulation
+        Z = np.random.standard_normal((n_steps, n_paths))
+        drift = (mu - 0.5 * sigma**2) * dt
+        diffusion = sigma * np.sqrt(dt) * Z
+        log_returns = drift + diffusion
+        log_paths = np.vstack([np.zeros(n_paths), np.cumsum(log_returns, axis=0)])
+        paths = S0 * np.exp(log_paths)
+        return paths.T.tolist()  # Transpose to (n_paths, n_steps)
     else:
-        # Pure Python fallback
-        paths = [[S0] for _ in range(n_simulations)]
-
-        for sim in range(n_simulations):
-            for t in range(n_steps):
+        # Fallback without numpy
+        import random
+        paths = []
+        for _ in range(n_paths):
+            path = [S0]
+            for _ in range(n_steps):
                 Z = random.gauss(0, 1)
-                S_prev = paths[sim][-1]
-                S_next = S_prev * math.exp(
-                    (mu - 0.5 * sigma**2) * dt + sigma * math.sqrt(dt) * Z
-                )
-                paths[sim].append(S_next)
-
+                drift = (mu - 0.5 * sigma**2) * dt
+                diffusion = sigma * math.sqrt(dt) * Z
+                path.append(path[-1] * math.exp(drift + diffusion))
+            paths.append(path)
         return paths
 
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Parse query parameters
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
 
         try:
-            # Parameters
-            S0 = float(params.get("S0", [100])[0])
-            mu = float(params.get("mu", [0.10])[0])  # Expected return (10%)
-            sigma = float(params.get("sigma", [0.2])[0])  # Volatility (20%)
-            T = float(params.get("T", [1])[0])  # Time horizon in years
-            n_simulations = min(int(params.get("n_simulations", [1000])[0]), 2000)
+            ticker = params.get("ticker", ["AAPL"])[0].upper()
+            initial_investment = float(params.get("investment", [10000])[0])
+            n_simulations = min(int(params.get("simulations", [1000])[0]), 2000)
+            time_horizon = float(params.get("horizon", [1])[0])  # Years
+            period = params.get("period", ["1y"])[0]
 
-            dt = 1/252  # Daily steps
-            n_steps = int(T / dt)
+            # Fetch historical data
+            if YFINANCE_AVAILABLE:
+                stock = yf.Ticker(ticker)
+                hist = stock.history(period=period)
+                if hist.empty:
+                    raise ValueError(f"No data found for {ticker}")
+                returns = hist["Close"].pct_change().dropna()
+                current_price = float(hist["Close"].iloc[-1])
+
+                if NUMPY_AVAILABLE:
+                    mu = float(np.mean(returns)) * 252
+                    sigma = float(np.std(returns)) * np.sqrt(252)
+                else:
+                    returns_list = returns.tolist()
+                    mu = sum(returns_list) / len(returns_list) * 252
+                    var = sum((r - mu/252)**2 for r in returns_list) / len(returns_list)
+                    sigma = math.sqrt(var) * math.sqrt(252)
+            else:
+                mu, sigma, current_price = 0.08, 0.20, 100.0
 
             # Run simulation
-            paths = simulate_gbm(S0, mu, sigma, T, dt, n_simulations)
+            dt = 1/252
+            paths = gbm_simulation(initial_investment, mu, sigma, time_horizon, dt, n_simulations)
 
+            # Calculate statistics
             if NUMPY_AVAILABLE:
-                final_prices = paths[:, -1]
-
-                # Calculate statistics
-                mean_price = float(np.mean(final_prices))
-                std_price = float(np.std(final_prices))
-                percentile_5 = float(np.percentile(final_prices, 5))
-                percentile_25 = float(np.percentile(final_prices, 25))
-                percentile_50 = float(np.percentile(final_prices, 50))
-                percentile_75 = float(np.percentile(final_prices, 75))
-                percentile_95 = float(np.percentile(final_prices, 95))
-                prob_profit = float(np.mean(final_prices > S0))
-                max_price = float(np.max(final_prices))
-                min_price = float(np.min(final_prices))
-
-                # Get sample paths for visualization (first 100)
-                sample_paths = paths[:min(100, n_simulations), :].tolist()
-                final_prices_list = final_prices.tolist()
+                final_values = np.array([p[-1] for p in paths])
+                mean_value = float(np.mean(final_values))
+                median_value = float(np.median(final_values))
+                std_value = float(np.std(final_values))
+                percentile_5 = float(np.percentile(final_values, 5))
+                percentile_25 = float(np.percentile(final_values, 25))
+                percentile_75 = float(np.percentile(final_values, 75))
+                percentile_95 = float(np.percentile(final_values, 95))
+                prob_profit = float(np.mean(final_values > initial_investment))
             else:
-                final_prices = [p[-1] for p in paths]
-                final_prices_sorted = sorted(final_prices)
+                final_values = sorted([p[-1] for p in paths])
+                n = len(final_values)
+                mean_value = sum(final_values) / n
+                median_value = final_values[n // 2]
+                var = sum((v - mean_value)**2 for v in final_values) / n
+                std_value = math.sqrt(var)
+                percentile_5 = final_values[int(n * 0.05)]
+                percentile_25 = final_values[int(n * 0.25)]
+                percentile_75 = final_values[int(n * 0.75)]
+                percentile_95 = final_values[int(n * 0.95)]
+                prob_profit = sum(1 for v in final_values if v > initial_investment) / n
 
-                mean_price = sum(final_prices) / len(final_prices)
-                variance = sum((x - mean_price)**2 for x in final_prices) / len(final_prices)
-                std_price = math.sqrt(variance)
-
-                def percentile(data, p):
-                    idx = int(len(data) * p / 100)
-                    return data[max(0, min(idx, len(data)-1))]
-
-                percentile_5 = percentile(final_prices_sorted, 5)
-                percentile_25 = percentile(final_prices_sorted, 25)
-                percentile_50 = percentile(final_prices_sorted, 50)
-                percentile_75 = percentile(final_prices_sorted, 75)
-                percentile_95 = percentile(final_prices_sorted, 95)
-                prob_profit = sum(1 for p in final_prices if p > S0) / len(final_prices)
-                max_price = max(final_prices)
-                min_price = min(final_prices)
-
-                sample_paths = paths[:min(100, n_simulations)]
-                final_prices_list = final_prices
+            # Sample paths for visualization (max 50)
+            sample_indices = list(range(0, n_simulations, max(1, n_simulations // 50)))[:50]
+            sample_paths = [[round(v, 2) for v in paths[i]] for i in sample_indices]
 
             result = {
+                "ticker": ticker,
+                "initial_investment": initial_investment,
+                "n_simulations": n_simulations,
+                "time_horizon_years": time_horizon,
+                "current_price": round(current_price, 2),
                 "parameters": {
-                    "S0": S0,
-                    "mu": mu,
-                    "sigma": sigma,
-                    "T": T,
-                    "n_simulations": n_simulations,
-                    "n_steps": n_steps,
+                    "annualized_return": round(mu * 100, 2),
+                    "annualized_volatility": round(sigma * 100, 2),
                 },
                 "statistics": {
-                    "mean": round(mean_price, 2),
-                    "std": round(std_price, 2),
-                    "min": round(min_price, 2),
-                    "max": round(max_price, 2),
+                    "expected_value": round(mean_value, 2),
+                    "median_value": round(median_value, 2),
+                    "std_deviation": round(std_value, 2),
                     "percentile_5": round(percentile_5, 2),
                     "percentile_25": round(percentile_25, 2),
-                    "percentile_50": round(percentile_50, 2),
                     "percentile_75": round(percentile_75, 2),
                     "percentile_95": round(percentile_95, 2),
-                    "prob_profit": round(prob_profit, 4),
+                    "probability_of_profit": round(prob_profit * 100, 2),
+                    "probability_of_loss": round((1 - prob_profit) * 100, 2),
                 },
-                "sample_paths": [[round(p, 2) for p in path[::5]] for path in sample_paths[:50]],  # Sample every 5th point
-                "final_prices": [round(p, 2) for p in final_prices_list[:500]],  # First 500 for histogram
+                "sample_paths": sample_paths,
+                "final_values_histogram": [round(v, 2) for v in sorted(final_values)[::max(1, n_simulations // 100)]],
             }
 
             self.send_response(200)

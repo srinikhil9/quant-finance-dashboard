@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,62 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TutorialCard } from "@/components/ui/tooltip";
 import { PlotlyChart, chartColors } from "@/components/charts";
+import { ResultInterpretation, type InterpretationData, formatInterpretationCurrency } from "@/components/ui/result-interpretation";
 import { varTooltips } from "@/lib/tooltips";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils/formatters";
 import { LineChart, RefreshCw, Play, Loader2, AlertTriangle } from "lucide-react";
+import { trackCalculation } from "@/lib/analytics";
+
+function getVaRInterpretation(result: VaRResult): InterpretationData {
+  const varPct = Math.abs(result.var_percentages.historical);
+  const confidencePct = result.confidence_level * 100;
+
+  // Determine risk level
+  let riskLevel: string;
+  let status: InterpretationData["status"];
+  if (varPct < 2) {
+    riskLevel = "LOW";
+    status = "positive";
+  } else if (varPct < 5) {
+    riskLevel = "MODERATE";
+    status = "neutral";
+  } else {
+    riskLevel = "HIGH";
+    status = "negative";
+  }
+
+  // How many days out of 100 could exceed VaR
+  const exceedanceDays = Math.round((1 - result.confidence_level) * 100);
+
+  const points: string[] = [
+    `At ${confidencePct.toFixed(0)}% confidence, your maximum daily loss should not exceed ${formatInterpretationCurrency(result.var_dollar.historical)} (${varPct.toFixed(2)}% of portfolio)`,
+    `This means on ${100 - exceedanceDays} out of 100 trading days, your loss will be less than this amount`,
+    `However, on ~${exceedanceDays} days per 100, losses COULD exceed VaR - that's when CVaR matters`,
+    `CVaR (Expected Shortfall): When losses DO exceed VaR, expect to lose ~${formatInterpretationCurrency(result.var_dollar.cvar)} on average`,
+    `Risk Level: ${riskLevel} - ${varPct < 2 ? 'Relatively stable asset' : varPct < 5 ? 'Typical equity volatility' : 'High volatility - proceed with caution'}`,
+  ];
+
+  // Add volatility context
+  if (result.statistics.annualized_volatility > 40) {
+    points.push(`⚠️ High volatility (${result.statistics.annualized_volatility.toFixed(1)}%) - this asset has large price swings`);
+  }
+
+  let advice: string;
+  if (riskLevel === "HIGH") {
+    advice = "High risk detected. Consider reducing position size, diversifying, or using hedges to protect against large losses.";
+  } else if (riskLevel === "MODERATE") {
+    advice = "Typical market risk. Ensure this fits your risk tolerance and always use appropriate position sizing.";
+  } else {
+    advice = "Lower risk profile. Still monitor for unusual market conditions that could cause larger-than-expected losses.";
+  }
+
+  return {
+    status,
+    summary: `Your portfolio has ${riskLevel} daily risk. At ${confidencePct.toFixed(0)}% confidence, daily losses should stay below ${formatInterpretationCurrency(result.var_dollar.historical)}.`,
+    points,
+    advice,
+  };
+}
 
 interface VaRResult {
   ticker: string;
@@ -52,6 +105,14 @@ export default function VaRPage() {
   const calculateVaR = async () => {
     setLoading(true);
     setError(null);
+    const startTime = performance.now();
+
+    const inputParams = {
+      ticker,
+      confidence: confidenceLevel,
+      portfolio_value: portfolioValue,
+      period,
+    };
 
     try {
       const params = new URLSearchParams({
@@ -69,8 +130,14 @@ export default function VaRPage() {
       }
 
       setResult(data);
+
+      // Track successful calculation
+      trackCalculation('var', inputParams, data, Math.round(performance.now() - startTime));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Calculation failed");
+
+      // Track failed calculation
+      trackCalculation('var', inputParams, { error: err instanceof Error ? err.message : 'Unknown error' }, Math.round(performance.now() - startTime));
     } finally {
       setLoading(false);
     }
@@ -326,6 +393,11 @@ export default function VaRPage() {
                       {result.data_points}
                     </div>
                   </div>
+                </div>
+
+                {/* Result Interpretation */}
+                <div className="mt-6">
+                  <ResultInterpretation data={getVaRInterpretation(result)} />
                 </div>
               </>
             ) : (
