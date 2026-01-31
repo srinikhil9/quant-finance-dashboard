@@ -19,9 +19,12 @@ import {
   Menu,
   X,
   ChevronDown,
+  Search,
+  Command,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useState, useRef, useEffect } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 
 // Types for navigation
 type NavItem = { href: string; label: string; icon: React.ElementType };
@@ -176,6 +179,21 @@ export function Navbar() {
 
           {/* Desktop Navigation with Dropdowns */}
           <div className="hidden md:flex items-center space-x-1">
+            {/* Command Palette Trigger */}
+            <button
+              onClick={() => {
+                // Dispatch Ctrl+K event to open command palette
+                window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 mr-2 text-sm text-zinc-400 bg-zinc-800/50 border border-zinc-700 rounded-md hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Search</span>
+              <kbd className="hidden lg:inline ml-1 px-1.5 py-0.5 text-xs bg-zinc-900 border border-zinc-600 rounded font-mono">
+                ⌘K
+              </kbd>
+            </button>
+
             {navGroups.map((group) => {
               if ('href' in group) {
                 // Single item (Overview)

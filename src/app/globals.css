@@ -125,3 +125,198 @@ input:focus, select:focus, textarea:focus {
 .animate-pulse-glow {
   animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* ================================================
+   BLOOMBERG TERMINAL STYLE - PROFESSIONAL UI
+   ================================================ */
+
+/* Dense layout utilities */
+.dense-layout {
+  --card-padding: 0.75rem;
+  --section-gap: 0.5rem;
+}
+
+.dense-layout .card {
+  padding: var(--card-padding);
+}
+
+/* Compact text */
+.text-compact {
+  line-height: 1.3;
+}
+
+/* Terminal-style grid lines */
+.terminal-grid {
+  background-image:
+    linear-gradient(to right, rgba(39, 39, 42, 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(39, 39, 42, 0.3) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Status indicator dots */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.live {
+  background: var(--profit);
+  box-shadow: 0 0 6px var(--profit);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.status-dot.warning {
+  background: var(--warning);
+}
+
+.status-dot.error {
+  background: var(--loss);
+}
+
+/* Blinking cursor effect for live data */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Price ticker animation */
+@keyframes ticker-up {
+  from { background-color: rgba(34, 197, 94, 0.3); }
+  to { background-color: transparent; }
+}
+
+@keyframes ticker-down {
+  from { background-color: rgba(239, 68, 68, 0.3); }
+  to { background-color: transparent; }
+}
+
+.price-flash-up {
+  animation: ticker-up 0.5s ease-out;
+}
+
+.price-flash-down {
+  animation: ticker-down 0.5s ease-out;
+}
+
+/* Keyboard shortcut badges */
+kbd {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  background: rgba(39, 39, 42, 0.8);
+  border: 1px solid rgba(63, 63, 70, 0.8);
+  color: #a1a1aa;
+  white-space: nowrap;
+}
+
+/* Data cell highlighting on hover */
+.data-cell:hover {
+  background: rgba(34, 197, 94, 0.05);
+}
+
+/* Gradient borders for important elements */
+.gradient-border {
+  position: relative;
+  background: linear-gradient(var(--card), var(--card)) padding-box,
+              linear-gradient(135deg, var(--profit), var(--info)) border-box;
+  border: 1px solid transparent;
+}
+
+/* Metric value styling */
+.metric-value {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.metric-value.large {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.metric-value.medium {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.metric-value.small {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Subtle glow effects */
+.glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+}
+
+.glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+}
+
+.glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+/* Section headers - Bloomberg style */
+.section-header {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted-foreground);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.75rem;
+}
+
+/* Hover reveal for additional info */
+.hover-reveal .reveal-content {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.hover-reveal:hover .reveal-content {
+  opacity: 1;
+}
+
+/* Quick fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* cmdk command palette styling overrides */
+[cmdk-root] {
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+[cmdk-input] {
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+[cmdk-item] {
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(34, 197, 94, 0.3);
+  color: var(--foreground);
+}
