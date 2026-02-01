@@ -129,6 +129,7 @@ export default function PairsTradingPage() {
 
     try {
       const params = new URLSearchParams({
+        action: 'pairs',
         ticker1,
         ticker2,
         period,
@@ -136,7 +137,7 @@ export default function PairsTradingPage() {
         exit: exitThreshold.toString(),
       });
 
-      const response = await fetch(`/api/cointegration?${params}`);
+      const response = await fetch(`/api/market-analysis?${params}`);
       const data = await response.json();
 
       if (data.error) {
