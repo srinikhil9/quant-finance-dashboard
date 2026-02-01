@@ -21,6 +21,8 @@ import {
   ChevronDown,
   Search,
   Command,
+  Table2,
+  CandlestickChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useState, useRef, useEffect } from "react";
@@ -39,6 +41,7 @@ const navGroups: NavGroup[] = [
     icon: TrendingUp,
     items: [
       { href: "/black-scholes", label: "Options", icon: TrendingUp },
+      { href: "/options-chain", label: "Options Chain", icon: Table2 },
       { href: "/fixed-income", label: "Bonds", icon: Landmark },
     ],
   },
@@ -49,6 +52,7 @@ const navGroups: NavGroup[] = [
       { href: "/var", label: "VaR Calculator", icon: LineChart },
       { href: "/volatility", label: "Volatility", icon: Activity },
       { href: "/monte-carlo", label: "Monte Carlo", icon: BarChart3 },
+      { href: "/technical", label: "Technical Analysis", icon: CandlestickChart },
     ],
   },
   {
@@ -77,9 +81,11 @@ const navGroups: NavGroup[] = [
 const allNavItems = [
   { href: "/", label: "Overview", icon: Activity },
   { href: "/black-scholes", label: "Options", icon: TrendingUp },
+  { href: "/options-chain", label: "Options Chain", icon: Table2 },
   { href: "/monte-carlo", label: "Monte Carlo", icon: BarChart3 },
   { href: "/var", label: "VaR", icon: LineChart },
   { href: "/volatility", label: "Volatility", icon: Activity },
+  { href: "/technical", label: "Technical", icon: CandlestickChart },
   { href: "/ml-prediction", label: "ML Predict", icon: Brain },
   { href: "/pairs-trading", label: "Pairs", icon: GitCompare },
   { href: "/fixed-income", label: "Bonds", icon: Landmark },

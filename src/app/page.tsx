@@ -20,6 +20,8 @@ import {
   Network,
   MessageSquare,
   Layers,
+  Table2,
+  CandlestickChart,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
@@ -31,6 +33,15 @@ const modules = [
     icon: TrendingUp,
     color: "text-green-500",
     features: ["Call/Put Pricing", "Greeks (Delta, Gamma, Vega, Theta, Rho)", "Implied Volatility"],
+  },
+  {
+    href: "/options-chain",
+    title: "Options Chain Analysis",
+    description: "Full options chain data with Greeks across all strikes and expirations",
+    icon: Table2,
+    color: "text-lime-500",
+    badge: "New",
+    features: ["Calls & Puts Tables", "IV Surface Visualization", "Put/Call Ratio Analysis"],
   },
   {
     href: "/monte-carlo",
@@ -55,6 +66,15 @@ const modules = [
     icon: Activity,
     color: "text-yellow-500",
     features: ["EWMA Volatility", "GARCH(1,1)", "Volatility Forecasting"],
+  },
+  {
+    href: "/technical",
+    title: "Technical Analysis",
+    description: "Chart patterns and indicators with buy/sell signals",
+    icon: CandlestickChart,
+    color: "text-cyan-500",
+    badge: "New",
+    features: ["RSI, MACD, Bollinger Bands", "Moving Averages", "Trading Signals"],
   },
   {
     href: "/ml-prediction",
@@ -155,7 +175,7 @@ export default function Home() {
             <span>Live Market Data via yFinance</span>
           </div>
           <div className="text-sm text-muted-foreground">|</div>
-          <div className="text-sm text-muted-foreground">13 Interactive Modules</div>
+          <div className="text-sm text-muted-foreground">15 Interactive Modules</div>
         </div>
       </section>
 
@@ -215,7 +235,7 @@ export default function Home() {
       <section className="grid gap-4 md:grid-cols-4">
         <Card className="bg-gradient-to-br from-green-500/10 to-transparent border-green-500/20">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-500">13</div>
+            <div className="text-2xl font-bold text-green-500">15</div>
             <div className="text-sm text-muted-foreground">Financial Models</div>
           </CardContent>
         </Card>

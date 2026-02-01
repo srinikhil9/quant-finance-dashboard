@@ -21,6 +21,8 @@ import {
   Search,
   Command as CommandIcon,
   ArrowRight,
+  Table2,
+  CandlestickChart,
 } from 'lucide-react';
 
 interface CommandItem {
@@ -43,6 +45,14 @@ const commands: CommandItem[] = [
     href: '/black-scholes',
     category: 'Pricing',
     keywords: ['options', 'greeks', 'call', 'put', 'delta', 'gamma', 'theta', 'vega'],
+  },
+  {
+    id: 'options-chain',
+    label: 'Options Chain Analysis',
+    icon: <Table2 className="w-4 h-4" />,
+    href: '/options-chain',
+    category: 'Pricing',
+    keywords: ['options chain', 'strikes', 'expiration', 'iv', 'implied volatility', 'calls', 'puts', 'open interest'],
   },
   {
     id: 'fixed-income',
@@ -80,6 +90,14 @@ const commands: CommandItem[] = [
     href: '/volatility',
     category: 'Risk',
     keywords: ['ewma', 'garch', 'volatility', 'forecast'],
+  },
+  {
+    id: 'technical',
+    label: 'Technical Analysis',
+    icon: <CandlestickChart className="w-4 h-4" />,
+    href: '/technical',
+    category: 'Risk',
+    keywords: ['rsi', 'macd', 'bollinger', 'moving average', 'sma', 'ema', 'indicators', 'chart', 'signals'],
   },
   // ML & Trading
   {
