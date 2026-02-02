@@ -25,6 +25,7 @@ import {
   CandlestickChart,
   Briefcase,
   FlaskConical,
+  Database,
 } from 'lucide-react';
 
 interface CommandItem {
@@ -186,6 +187,15 @@ const commands: CommandItem[] = [
     href: '/anomaly-detection',
     category: 'Advanced',
     keywords: ['isolation forest', 'outlier', 'anomaly', 'unusual'],
+  },
+  // Admin
+  {
+    id: 'admin',
+    label: 'Admin Dashboard',
+    icon: <Database className="w-4 h-4" />,
+    href: '/admin',
+    category: 'Admin',
+    keywords: ['admin', 'analytics', 'dashboard', 'metrics', 'users', 'statistics'],
   },
 ];
 
