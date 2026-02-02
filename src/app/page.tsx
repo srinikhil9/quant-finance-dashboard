@@ -22,6 +22,7 @@ import {
   Layers,
   Table2,
   CandlestickChart,
+  Briefcase,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
@@ -75,6 +76,15 @@ const modules = [
     color: "text-cyan-500",
     badge: "New",
     features: ["RSI, MACD, Bollinger Bands", "Moving Averages", "Trading Signals"],
+  },
+  {
+    href: "/portfolio",
+    title: "Portfolio Analytics",
+    description: "Track positions, analyze performance, and measure risk metrics",
+    icon: Briefcase,
+    color: "text-violet-500",
+    badge: "New",
+    features: ["P&L Tracking", "Correlation Matrix", "Sharpe, Beta, VaR"],
   },
   {
     href: "/ml-prediction",
@@ -175,7 +185,7 @@ export default function Home() {
             <span>Live Market Data via yFinance</span>
           </div>
           <div className="text-sm text-muted-foreground">|</div>
-          <div className="text-sm text-muted-foreground">15 Interactive Modules</div>
+          <div className="text-sm text-muted-foreground">16 Interactive Modules</div>
         </div>
       </section>
 
@@ -235,7 +245,7 @@ export default function Home() {
       <section className="grid gap-4 md:grid-cols-4">
         <Card className="bg-gradient-to-br from-green-500/10 to-transparent border-green-500/20">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-500">15</div>
+            <div className="text-2xl font-bold text-green-500">16</div>
             <div className="text-sm text-muted-foreground">Financial Models</div>
           </CardContent>
         </Card>

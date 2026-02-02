@@ -23,6 +23,7 @@ import {
   Command,
   Table2,
   CandlestickChart,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useState, useRef, useEffect } from "react";
@@ -53,6 +54,7 @@ const navGroups: NavGroup[] = [
       { href: "/volatility", label: "Volatility", icon: Activity },
       { href: "/monte-carlo", label: "Monte Carlo", icon: BarChart3 },
       { href: "/technical", label: "Technical Analysis", icon: CandlestickChart },
+      { href: "/portfolio", label: "Portfolio Analytics", icon: Briefcase },
     ],
   },
   {
@@ -86,6 +88,7 @@ const allNavItems = [
   { href: "/var", label: "VaR", icon: LineChart },
   { href: "/volatility", label: "Volatility", icon: Activity },
   { href: "/technical", label: "Technical", icon: CandlestickChart },
+  { href: "/portfolio", label: "Portfolio", icon: Briefcase },
   { href: "/ml-prediction", label: "ML Predict", icon: Brain },
   { href: "/pairs-trading", label: "Pairs", icon: GitCompare },
   { href: "/fixed-income", label: "Bonds", icon: Landmark },

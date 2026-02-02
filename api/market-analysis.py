@@ -513,6 +513,159 @@ def analyze_pairs_trading(ticker1: str, ticker2: str, entry_threshold: float = 2
         return {'error': str(e)}
 
 
+# ============================================================================
+# PORTFOLIO ANALYTICS FUNCTIONS
+# ============================================================================
+
+def analyze_portfolio(tickers_str: str, shares_str: str, cost_basis_str: str, period: str = '1y'):
+    """Comprehensive portfolio analysis"""
+    try:
+        # Parse inputs
+        tickers = [t.strip().upper() for t in tickers_str.split(',')]
+        shares = [float(s.strip()) for s in shares_str.split(',')]
+        cost_basis = [float(c.strip()) for c in cost_basis_str.split(',')]
+
+        if len(tickers) != len(shares) or len(tickers) != len(cost_basis):
+            return {'error': 'Tickers, shares, and cost basis must have the same number of items'}
+
+        if len(tickers) > 10:
+            return {'error': 'Maximum 10 tickers allowed'}
+
+        # Fetch data for all tickers
+        holdings = []
+        all_returns = []
+        total_cost = 0
+        total_value = 0
+
+        for i, ticker in enumerate(tickers):
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period=period)
+
+            if hist.empty:
+                return {'error': f'No data found for {ticker}'}
+
+            current_price = float(hist['Close'].iloc[-1])
+            position_value = current_price * shares[i]
+            position_cost = cost_basis[i] * shares[i]
+            pnl = position_value - position_cost
+            pnl_pct = (pnl / position_cost) * 100 if position_cost > 0 else 0
+
+            # Calculate daily returns
+            returns = hist['Close'].pct_change().dropna()
+            all_returns.append(returns)
+
+            # Get stock info
+            try:
+                info = stock.info
+                sector = info.get('sector', 'Unknown')
+                name = info.get('shortName', ticker)
+            except:
+                sector = 'Unknown'
+                name = ticker
+
+            holdings.append({
+                'ticker': ticker,
+                'name': name,
+                'shares': shares[i],
+                'costBasis': round(cost_basis[i], 2),
+                'currentPrice': round(current_price, 2),
+                'positionValue': round(position_value, 2),
+                'positionCost': round(position_cost, 2),
+                'pnl': round(pnl, 2),
+                'pnlPercent': round(pnl_pct, 2),
+                'sector': sector
+            })
+
+            total_cost += position_cost
+            total_value += position_value
+
+        # Calculate portfolio weights
+        weights = np.array([h['positionValue'] for h in holdings]) / total_value
+        for i, h in enumerate(holdings):
+            h['weight'] = round(weights[i] * 100, 2)
+
+        # Align all return series to common dates
+        min_len = min(len(r) for r in all_returns)
+        aligned_returns = np.column_stack([r.values[-min_len:] for r in all_returns])
+        dates = all_returns[0].index[-min_len:].strftime('%Y-%m-%d').tolist()
+
+        # Portfolio returns (weighted)
+        portfolio_returns = aligned_returns @ weights
+
+        # Portfolio statistics
+        ann_return = float(np.mean(portfolio_returns) * 252 * 100)
+        ann_volatility = float(np.std(portfolio_returns) * np.sqrt(252) * 100)
+        sharpe = ann_return / ann_volatility if ann_volatility > 0 else 0
+
+        # Max drawdown
+        cumulative = np.cumprod(1 + portfolio_returns)
+        running_max = np.maximum.accumulate(cumulative)
+        drawdown = (cumulative - running_max) / running_max
+        max_drawdown = float(np.min(drawdown) * 100)
+
+        # Correlation matrix
+        corr_matrix = np.corrcoef(aligned_returns.T)
+
+        # Sector allocation
+        sectors = {}
+        for h in holdings:
+            sector = h['sector']
+            if sector not in sectors:
+                sectors[sector] = 0
+            sectors[sector] += h['weight']
+
+        sector_allocation = [{'sector': k, 'weight': round(v, 2)} for k, v in sectors.items()]
+
+        # Portfolio VaR (95%)
+        var_95 = float(np.percentile(portfolio_returns, 5) * total_value)
+
+        # Beta (vs SPY if not in portfolio)
+        try:
+            spy = yf.Ticker('SPY')
+            spy_hist = spy.history(period=period)
+            spy_returns = spy_hist['Close'].pct_change().dropna().values[-min_len:]
+            cov = np.cov(portfolio_returns, spy_returns)[0, 1]
+            var_market = np.var(spy_returns)
+            beta = float(cov / var_market) if var_market > 0 else 1.0
+        except:
+            beta = 1.0
+
+        # Performance chart data
+        cumulative_returns = np.cumprod(1 + portfolio_returns).tolist()
+
+        return {
+            'holdings': holdings,
+            'summary': {
+                'totalValue': round(total_value, 2),
+                'totalCost': round(total_cost, 2),
+                'totalPnl': round(total_value - total_cost, 2),
+                'totalPnlPercent': round((total_value - total_cost) / total_cost * 100, 2) if total_cost > 0 else 0,
+                'numPositions': len(holdings)
+            },
+            'metrics': {
+                'annualizedReturn': round(ann_return, 2),
+                'annualizedVolatility': round(ann_volatility, 2),
+                'sharpeRatio': round(sharpe, 2),
+                'maxDrawdown': round(max_drawdown, 2),
+                'beta': round(beta, 2),
+                'var95': round(var_95, 2)
+            },
+            'sectorAllocation': sector_allocation,
+            'correlationMatrix': {
+                'tickers': tickers,
+                'matrix': [[round(corr_matrix[i][j], 3) for j in range(len(tickers))] for i in range(len(tickers))]
+            },
+            'performance': {
+                'dates': dates[::5],  # Subsample for chart
+                'cumulativeReturns': [round(c, 4) for c in cumulative_returns[::5]]
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        return {'error': str(e)}
+
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_path = urlparse(self.path)
@@ -534,10 +687,16 @@ class handler(BaseHTTPRequestHandler):
             exit_threshold = float(query_params.get('exit', ['0.5'])[0])
             period = query_params.get('period', ['2y'])[0]
             result = analyze_pairs_trading(ticker1, ticker2, entry_threshold, exit_threshold, period)
+        elif action == 'portfolio':
+            tickers = query_params.get('tickers', ['AAPL,MSFT,GOOGL'])[0]
+            shares = query_params.get('shares', ['10,10,10'])[0]
+            cost_basis = query_params.get('costBasis', ['150,300,140'])[0]
+            period = query_params.get('period', ['1y'])[0]
+            result = analyze_portfolio(tickers, shares, cost_basis, period)
         else:
             result = {
-                'error': 'Invalid action. Use ?action=options-chain, ?action=technical, or ?action=pairs',
-                'availableActions': ['options-chain', 'technical', 'pairs']
+                'error': 'Invalid action. Use ?action=options-chain, ?action=technical, ?action=pairs, or ?action=portfolio',
+                'availableActions': ['options-chain', 'technical', 'pairs', 'portfolio']
             }
 
         self.send_response(200)

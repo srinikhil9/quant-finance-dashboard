@@ -23,6 +23,7 @@ import {
   ArrowRight,
   Table2,
   CandlestickChart,
+  Briefcase,
 } from 'lucide-react';
 
 interface CommandItem {
@@ -98,6 +99,14 @@ const commands: CommandItem[] = [
     href: '/technical',
     category: 'Risk',
     keywords: ['rsi', 'macd', 'bollinger', 'moving average', 'sma', 'ema', 'indicators', 'chart', 'signals'],
+  },
+  {
+    id: 'portfolio',
+    label: 'Portfolio Analytics',
+    icon: <Briefcase className="w-4 h-4" />,
+    href: '/portfolio',
+    category: 'Risk',
+    keywords: ['portfolio', 'holdings', 'positions', 'pnl', 'allocation', 'correlation', 'sharpe', 'beta', 'drawdown'],
   },
   // ML & Trading
   {
