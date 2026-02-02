@@ -514,6 +514,198 @@ def analyze_pairs_trading(ticker1: str, ticker2: str, entry_threshold: float = 2
 
 
 # ============================================================================
+# BACKTESTING ENGINE FUNCTIONS
+# ============================================================================
+
+def backtest_strategy(ticker: str, strategy: str, period: str = '2y',
+                      short_window: int = 20, long_window: int = 50,
+                      rsi_oversold: int = 30, rsi_overbought: int = 70,
+                      initial_capital: float = 10000):
+    """Run backtest for various trading strategies"""
+    try:
+        stock = yf.Ticker(ticker)
+        df = stock.history(period=period)
+
+        if df.empty or len(df) < long_window + 50:
+            return {'error': f'Insufficient data for {ticker}'}
+
+        close = df['Close'].values
+        high = df['High'].values
+        low = df['Low'].values
+        dates = df.index.strftime('%Y-%m-%d').tolist()
+
+        # Generate signals based on strategy
+        signals = np.zeros(len(close))
+
+        if strategy == 'ma_crossover':
+            # Moving Average Crossover
+            short_ma = np.convolve(close, np.ones(short_window)/short_window, mode='valid')
+            long_ma = np.convolve(close, np.ones(long_window)/long_window, mode='valid')
+
+            # Align arrays
+            offset = long_window - short_window
+            short_ma = short_ma[offset:]
+
+            # Pad signals
+            pad = long_window - 1
+            for i in range(len(short_ma)):
+                if short_ma[i] > long_ma[i]:
+                    signals[pad + i] = 1  # Buy
+                else:
+                    signals[pad + i] = -1  # Sell
+
+        elif strategy == 'rsi':
+            # RSI Strategy
+            delta = np.diff(close)
+            gain = np.where(delta > 0, delta, 0)
+            loss = np.where(delta < 0, -delta, 0)
+
+            avg_gain = np.zeros(len(close))
+            avg_loss = np.zeros(len(close))
+
+            # Initial averages
+            avg_gain[14] = np.mean(gain[:14])
+            avg_loss[14] = np.mean(loss[:14])
+
+            for i in range(15, len(close)):
+                avg_gain[i] = (avg_gain[i-1] * 13 + gain[i-1]) / 14
+                avg_loss[i] = (avg_loss[i-1] * 13 + loss[i-1]) / 14
+
+            rs = np.where(avg_loss > 0, avg_gain / avg_loss, 100)
+            rsi = 100 - (100 / (1 + rs))
+
+            for i in range(14, len(close)):
+                if rsi[i] < rsi_oversold:
+                    signals[i] = 1  # Buy (oversold)
+                elif rsi[i] > rsi_overbought:
+                    signals[i] = -1  # Sell (overbought)
+
+        elif strategy == 'bollinger':
+            # Bollinger Band Breakout
+            window = 20
+            sma = np.convolve(close, np.ones(window)/window, mode='valid')
+            rolling_std = np.array([np.std(close[i:i+window]) for i in range(len(close)-window+1)])
+
+            upper = sma + 2 * rolling_std
+            lower = sma - 2 * rolling_std
+
+            pad = window - 1
+            for i in range(len(sma)):
+                if close[pad + i] < lower[i]:
+                    signals[pad + i] = 1  # Buy (below lower band)
+                elif close[pad + i] > upper[i]:
+                    signals[pad + i] = -1  # Sell (above upper band)
+
+        elif strategy == 'buy_hold':
+            # Simple buy and hold
+            signals[:] = 1
+
+        # Calculate returns
+        returns = np.diff(close) / close[:-1]
+        returns = np.insert(returns, 0, 0)
+
+        # Position tracking (1 = long, 0 = flat, -1 = short)
+        position = 0
+        positions = np.zeros(len(close))
+        trades = []
+
+        for i in range(len(signals)):
+            if signals[i] == 1 and position <= 0:  # Buy signal
+                position = 1
+                trades.append({'date': dates[i], 'type': 'BUY', 'price': float(close[i])})
+            elif signals[i] == -1 and position >= 0:  # Sell signal
+                position = 0 if position == 1 else -1
+                if trades and trades[-1]['type'] == 'BUY':
+                    trades[-1]['exitDate'] = dates[i]
+                    trades[-1]['exitPrice'] = float(close[i])
+                    trades[-1]['pnl'] = float(close[i] - trades[-1]['price'])
+                    trades[-1]['pnlPercent'] = float((close[i] - trades[-1]['price']) / trades[-1]['price'] * 100)
+            positions[i] = position
+
+        # Strategy returns
+        strategy_returns = positions[:-1] * returns[1:]
+        strategy_returns = np.insert(strategy_returns, 0, 0)
+
+        # Cumulative returns
+        strategy_cumulative = np.cumprod(1 + strategy_returns)
+        buyhold_cumulative = np.cumprod(1 + returns)
+
+        # Performance metrics
+        total_return = float((strategy_cumulative[-1] - 1) * 100)
+        buyhold_return = float((buyhold_cumulative[-1] - 1) * 100)
+
+        ann_return = float(np.mean(strategy_returns) * 252 * 100)
+        ann_vol = float(np.std(strategy_returns) * np.sqrt(252) * 100)
+        sharpe = ann_return / ann_vol if ann_vol > 0 else 0
+
+        # Max drawdown
+        running_max = np.maximum.accumulate(strategy_cumulative)
+        drawdown = (strategy_cumulative - running_max) / running_max
+        max_drawdown = float(np.min(drawdown) * 100)
+
+        # Win rate
+        winning_trades = [t for t in trades if 'pnl' in t and t['pnl'] > 0]
+        losing_trades = [t for t in trades if 'pnl' in t and t['pnl'] < 0]
+        n_trades = len([t for t in trades if 'pnl' in t])
+        win_rate = float(len(winning_trades) / n_trades * 100) if n_trades > 0 else 0
+
+        # Average win/loss
+        avg_win = float(np.mean([t['pnlPercent'] for t in winning_trades])) if winning_trades else 0
+        avg_loss = float(np.mean([t['pnlPercent'] for t in losing_trades])) if losing_trades else 0
+
+        # Profit factor
+        gross_profit = sum(t['pnl'] for t in winning_trades) if winning_trades else 0
+        gross_loss = abs(sum(t['pnl'] for t in losing_trades)) if losing_trades else 1
+        profit_factor = float(gross_profit / gross_loss) if gross_loss > 0 else 0
+
+        # Final equity
+        final_equity = initial_capital * strategy_cumulative[-1]
+
+        # Subsample for chart
+        step = max(1, len(dates) // 200)
+
+        return {
+            'ticker': ticker,
+            'strategy': strategy,
+            'period': period,
+            'parameters': {
+                'shortWindow': short_window,
+                'longWindow': long_window,
+                'rsiOversold': rsi_oversold,
+                'rsiOverbought': rsi_overbought,
+                'initialCapital': initial_capital
+            },
+            'performance': {
+                'totalReturn': round(total_return, 2),
+                'buyholdReturn': round(buyhold_return, 2),
+                'annualizedReturn': round(ann_return, 2),
+                'annualizedVolatility': round(ann_vol, 2),
+                'sharpeRatio': round(sharpe, 2),
+                'maxDrawdown': round(max_drawdown, 2),
+                'winRate': round(win_rate, 1),
+                'avgWin': round(avg_win, 2),
+                'avgLoss': round(avg_loss, 2),
+                'profitFactor': round(profit_factor, 2),
+                'numTrades': n_trades,
+                'finalEquity': round(final_equity, 2)
+            },
+            'trades': trades[-20:],  # Last 20 trades
+            'chartData': {
+                'dates': dates[::step],
+                'prices': [round(p, 2) for p in close[::step]],
+                'strategyEquity': [round(c * initial_capital, 2) for c in strategy_cumulative[::step]],
+                'buyholdEquity': [round(c * initial_capital, 2) for c in buyhold_cumulative[::step]],
+                'signals': [int(s) for s in signals[::step]],
+                'drawdown': [round(d * 100, 2) for d in drawdown[::step]]
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        return {'error': str(e)}
+
+
+# ============================================================================
 # PORTFOLIO ANALYTICS FUNCTIONS
 # ============================================================================
 
@@ -693,10 +885,20 @@ class handler(BaseHTTPRequestHandler):
             cost_basis = query_params.get('costBasis', ['150,300,140'])[0]
             period = query_params.get('period', ['1y'])[0]
             result = analyze_portfolio(tickers, shares, cost_basis, period)
+        elif action == 'backtest':
+            strategy = query_params.get('strategy', ['ma_crossover'])[0]
+            period = query_params.get('period', ['2y'])[0]
+            short_window = int(query_params.get('shortWindow', ['20'])[0])
+            long_window = int(query_params.get('longWindow', ['50'])[0])
+            rsi_oversold = int(query_params.get('rsiOversold', ['30'])[0])
+            rsi_overbought = int(query_params.get('rsiOverbought', ['70'])[0])
+            initial_capital = float(query_params.get('capital', ['10000'])[0])
+            result = backtest_strategy(ticker, strategy, period, short_window, long_window,
+                                       rsi_oversold, rsi_overbought, initial_capital)
         else:
             result = {
-                'error': 'Invalid action. Use ?action=options-chain, ?action=technical, ?action=pairs, or ?action=portfolio',
-                'availableActions': ['options-chain', 'technical', 'pairs', 'portfolio']
+                'error': 'Invalid action. Use ?action=options-chain, ?action=technical, ?action=pairs, ?action=portfolio, or ?action=backtest',
+                'availableActions': ['options-chain', 'technical', 'pairs', 'portfolio', 'backtest']
             }
 
         self.send_response(200)

@@ -24,6 +24,7 @@ import {
   Table2,
   CandlestickChart,
   Briefcase,
+  FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useState, useRef, useEffect } from "react";
@@ -64,6 +65,7 @@ const navGroups: NavGroup[] = [
       { href: "/ml-prediction", label: "ML Predict", icon: Brain },
       { href: "/pairs-trading", label: "Pairs Trading", icon: GitCompare },
       { href: "/basket-trading", label: "Basket", icon: Sparkles },
+      { href: "/backtest", label: "Backtesting", icon: FlaskConical },
     ],
   },
   {
@@ -93,6 +95,7 @@ const allNavItems = [
   { href: "/pairs-trading", label: "Pairs", icon: GitCompare },
   { href: "/fixed-income", label: "Bonds", icon: Landmark },
   { href: "/basket-trading", label: "Basket", icon: Sparkles },
+  { href: "/backtest", label: "Backtest", icon: FlaskConical },
   { href: "/spo-portfolio", label: "SPO", icon: Target },
   { href: "/rl-hedging", label: "RL Hedge", icon: Bot },
   { href: "/regime-detection", label: "Regimes", icon: Eye },

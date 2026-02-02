@@ -23,6 +23,7 @@ import {
   Table2,
   CandlestickChart,
   Briefcase,
+  FlaskConical,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
@@ -116,8 +117,16 @@ const modules = [
     description: "Optimize cointegration weights using Bayesian optimization",
     icon: Sparkles,
     color: "text-pink-500",
-    badge: "New",
     features: ["Differential Evolution", "Multi-Asset Baskets", "Sharpe Maximization"],
+  },
+  {
+    href: "/backtest",
+    title: "Backtesting Engine",
+    description: "Test trading strategies on historical data",
+    icon: FlaskConical,
+    color: "text-sky-500",
+    badge: "New",
+    features: ["MA Crossover, RSI, Bollinger", "Win Rate & Profit Factor", "Equity Curve Analysis"],
   },
   {
     href: "/spo-portfolio",
@@ -185,7 +194,7 @@ export default function Home() {
             <span>Live Market Data via yFinance</span>
           </div>
           <div className="text-sm text-muted-foreground">|</div>
-          <div className="text-sm text-muted-foreground">16 Interactive Modules</div>
+          <div className="text-sm text-muted-foreground">17 Interactive Modules</div>
         </div>
       </section>
 
@@ -245,7 +254,7 @@ export default function Home() {
       <section className="grid gap-4 md:grid-cols-4">
         <Card className="bg-gradient-to-br from-green-500/10 to-transparent border-green-500/20">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-500">16</div>
+            <div className="text-2xl font-bold text-green-500">17</div>
             <div className="text-sm text-muted-foreground">Financial Models</div>
           </CardContent>
         </Card>

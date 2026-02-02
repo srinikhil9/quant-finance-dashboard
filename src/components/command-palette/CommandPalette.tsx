@@ -24,6 +24,7 @@ import {
   Table2,
   CandlestickChart,
   Briefcase,
+  FlaskConical,
 } from 'lucide-react';
 
 interface CommandItem {
@@ -135,6 +136,14 @@ const commands: CommandItem[] = [
     href: '/basket-trading',
     category: 'ML & Trading',
     keywords: ['portfolio', 'optimization', 'markowitz', 'efficient frontier'],
+  },
+  {
+    id: 'backtest',
+    label: 'Backtesting Engine',
+    icon: <FlaskConical className="w-4 h-4" />,
+    href: '/backtest',
+    category: 'ML & Trading',
+    keywords: ['backtest', 'strategy', 'historical', 'trading', 'simulation', 'ma crossover', 'rsi'],
   },
   // Advanced
   {
