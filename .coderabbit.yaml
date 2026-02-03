@@ -1,0 +1,51 @@
+# CodeRabbit Configuration for Quant Finance Dashboard
+# https://docs.coderabbit.ai/reference/configuration
+
+language: "en-US"
+early_access: false
+
+reviews:
+  # "chill" = helpful suggestions, "assertive" = stricter reviews
+  profile: "chill"
+
+  # Generate a summary of changes at the top of the PR
+  high_level_summary: true
+
+  # Show walkthrough of changes
+  review_status: true
+
+  # Automatically review new PRs
+  auto_review:
+    enabled: true
+    drafts: false  # Don't review draft PRs
+
+  # Path filters - ignore generated/vendor files
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/.next/**"
+    - "!**/dist/**"
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/.vercel/**"
+
+  # Static analysis tools
+  tools:
+    # TypeScript/JavaScript (frontend)
+    eslint:
+      enabled: true
+
+    # Python (API functions)
+    ruff:
+      enabled: true
+
+    # Markdown docs
+    markdownlint:
+      enabled: true
+
+    # GitHub integration
+    github-checks:
+      enabled: true
+
+# Allow chatting with CodeRabbit in PR comments
+chat:
+  auto_reply: true
