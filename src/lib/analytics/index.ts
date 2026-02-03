@@ -1,5 +1,15 @@
 import { supabase, isSupabaseConfigured } from '../supabase/client';
-import { getSessionId, getSessionMetadata } from './session';
+import {
+  getSessionId,
+  getSessionMetadata,
+  getEnhancedSessionMetadata,
+  getSessionData,
+  trackPageInSession,
+  trackModuleInSession,
+  trackTickerInSession,
+  type SessionData,
+} from './session';
+import { getVisitorInfo, getVisitorInfoSync, initVisitorInfo } from './visitorInfo';
 import type { Calculation, AnalyticsEvent, ModuleName } from '../supabase/types';
 
 /**
@@ -7,13 +17,20 @@ import type { Calculation, AnalyticsEvent, ModuleName } from '../supabase/types'
  *
  * All tracking is anonymous - we use session IDs, not user accounts.
  * Data is stored in Supabase for analysis.
+ *
+ * Enhanced features:
+ * - IP address tracking (via server-side API)
+ * - Geolocation (country, city, region, ISP)
+ * - Full session tracking (pages visited, modules used, duration)
  */
 
-// Queue for offline/failed events (retry later)
-let eventQueue: AnalyticsEvent[] = [];
+// Initialize visitor info fetching on load
+if (typeof window !== 'undefined') {
+  initVisitorInfo();
+}
 
 /**
- * Track a page view
+ * Track a page view with enhanced metadata
  */
 export async function trackPageView(page: string): Promise<void> {
   if (!isSupabaseConfigured() || !supabase) {
@@ -21,21 +38,39 @@ export async function trackPageView(page: string): Promise<void> {
     return;
   }
 
+  // Track page in session history
+  trackPageInSession(page);
+
+  // Get visitor info (may still be loading)
+  const visitorInfo = getVisitorInfoSync();
+
   const event: AnalyticsEvent = {
     session_id: getSessionId(),
     event_type: 'pageview',
     event_data: {
       page,
       url: typeof window !== 'undefined' ? window.location.href : '',
-      ...getSessionMetadata(),
+      ...getEnhancedSessionMetadata(),
     },
+    // Include geo data at top level for easier querying
+    ip_address: visitorInfo?.ip || null,
+    country: visitorInfo?.country || null,
+    city: visitorInfo?.city || null,
+    region: visitorInfo?.region || null,
+    isp: visitorInfo?.isp || null,
+    latitude: visitorInfo?.latitude || null,
+    longitude: visitorInfo?.longitude || null,
   };
 
   try {
+    // Insert analytics event
     const { error } = await supabase.from('analytics_events').insert(event);
     if (error) {
       console.warn('[Analytics] Failed to track pageview:', error.message);
     }
+
+    // Also update/create session record
+    await upsertSession();
   } catch (err) {
     console.warn('[Analytics] Error tracking pageview:', err);
   }
@@ -60,6 +95,18 @@ export async function trackCalculation(
     return;
   }
 
+  // Track module in session
+  trackModuleInSession(module);
+
+  // Track ticker if present in inputs
+  const ticker = inputs.ticker || inputs.symbol || inputs.stock;
+  if (typeof ticker === 'string') {
+    trackTickerInSession(ticker.toUpperCase());
+  }
+
+  // Get visitor info
+  const visitorInfo = getVisitorInfoSync();
+
   // Sanitize inputs - remove any potentially sensitive data
   const sanitizedInputs = sanitizeInputs(inputs);
 
@@ -72,6 +119,10 @@ export async function trackCalculation(
     input_params: sanitizedInputs,
     results: summarizedResults,
     execution_time_ms: executionTimeMs,
+    // Include geo data
+    ip_address: visitorInfo?.ip || null,
+    country: visitorInfo?.country || null,
+    city: visitorInfo?.city || null,
   };
 
   try {
@@ -79,6 +130,9 @@ export async function trackCalculation(
     if (error) {
       console.warn('[Analytics] Failed to track calculation:', error.message);
     }
+
+    // Update session with new calculation count
+    await upsertSession();
   } catch (err) {
     console.warn('[Analytics] Error tracking calculation:', err);
   }
@@ -95,10 +149,15 @@ export async function trackEvent(
     return;
   }
 
+  const visitorInfo = getVisitorInfoSync();
+
   const event: AnalyticsEvent = {
     session_id: getSessionId(),
     event_type: eventType,
     event_data: eventData,
+    ip_address: visitorInfo?.ip || null,
+    country: visitorInfo?.country || null,
+    city: visitorInfo?.city || null,
   };
 
   try {
@@ -126,6 +185,62 @@ export async function trackError(
     error_stack: errorStack,
     ...context,
   });
+}
+
+/**
+ * Upsert session data to the sessions table
+ * Creates a new session or updates existing one
+ */
+async function upsertSession(): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return;
+  }
+
+  try {
+    const sessionData = getSessionData();
+
+    // Try to upsert (insert or update)
+    const { error } = await supabase
+      .from('sessions')
+      .upsert(
+        {
+          ...sessionData,
+          // Don't update first_seen on subsequent upserts
+          first_seen: undefined,
+        },
+        {
+          onConflict: 'session_id',
+          ignoreDuplicates: false,
+        }
+      );
+
+    if (error) {
+      // If upsert fails, try insert (might be first time)
+      if (error.code === '23505') {
+        // Unique constraint violation - session exists, update it
+        const { error: updateError } = await supabase
+          .from('sessions')
+          .update({
+            last_seen: sessionData.last_seen,
+            total_pageviews: sessionData.total_pageviews,
+            modules_used: sessionData.modules_used,
+            tickers_analyzed: sessionData.tickers_analyzed,
+            last_page: sessionData.last_page,
+            page_sequence: sessionData.page_sequence,
+            session_duration_seconds: sessionData.session_duration_seconds,
+          })
+          .eq('session_id', sessionData.session_id);
+
+        if (updateError) {
+          console.warn('[Analytics] Failed to update session:', updateError.message);
+        }
+      } else {
+        console.warn('[Analytics] Failed to upsert session:', error.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[Analytics] Error upserting session:', err);
+  }
 }
 
 /**
@@ -219,3 +334,4 @@ export async function trackApiCall<T>(
 
 // Export session utilities for components that need them
 export { getSessionId } from './session';
+export { getVisitorInfo, getVisitorInfoSync } from './visitorInfo';
